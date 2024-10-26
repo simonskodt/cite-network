@@ -2,7 +2,7 @@
 
 A project to put together the courses I attend at Università della Svizzera italiana.
 
-<img src="./resources/screenshots/courses.png" alt="ER-Model" width="350" style="display: block; margin-left: auto; margin-right: auto;"/>
+<img src="./resources/screenshots/courses.png" alt="ER-Model" width="400" style="display: block; margin-left: auto; margin-right: auto;"/>
 
 ## My Overambitious Goal
 
@@ -26,7 +26,7 @@ Cardinality explained:
 | }o           | o{            | Zero or more (no upper limit) |
 | }\|          | \|{           | One or more (no upper limit) |
 
-<img src="./resources/screenshots/er-model.png" alt="ER-Model" width="200" style="display: block; margin-left: auto; margin-right: auto;"/>
+<img src="./resources/screenshots/er-model.png" alt="ER-Model" width="250" style="display: block; margin-left: auto; margin-right: auto;"/>
 
 ## Commit Message Conventions
 
