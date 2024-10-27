@@ -1,0 +1,174 @@
+title,author,summary,published
+Brittle System Analysis,"Stephen F. Bush, John Hershey, Kirby Vosburgh","  The goal of this paper is to define and analyze systems which exhibit brittle
+behavior. This behavior is characterized by a sudden and steep decline in
+performance as the system approaches the limits of tolerance. This can be due
+to input parameters which exceed a specified input, or environmental conditions
+which exceed specified operating boundaries. An analogy is made between brittle
+commmunication systems in particular and materials science.
+",1999-04-22T15:47:22Z
+The Unix KISS: A Case Study,Franco Milicchio,"  In this paper we show that the initial philosophy used in designing and
+developing UNIX in early times has been forgotten due to ""fast practices"". We
+question the leitmotif that microkernels, though being by design adherent to
+the KISS principle, have a number of context switches higher than their
+monolithic counterparts, running a test suite and verify the results with
+standard statistical validation tests. We advocate a wiser distribution of
+shared libraries by statistically analyzing the weight of each shared object in
+a typical UNIX system, showing that the majority of shared libraries exist in a
+common space for no real evidence of need. Finally we examine the UNIX heritage
+with an historical point of view, noticing how habits swiftly replaced the
+intents of the original authors, moving the focus from the earliest purpose of
+is avoiding complications, keeping a system simple to use and maintain.
+",2007-01-04T09:45:28Z
+"Learnings from an Under the Hood Analysis of an Object Storage Node IO
+  Stack","Pratik Mishra, Rekha Pitchumani, Yang Suk Kee","  Conventional object-stores are built on top of traditional OS storage stack,
+where I/O requests typically transfers through multiple hefty and redundant
+layers. The complexity of object management has grown dramatically with the
+ever increasing requirements of performance, consistency and fault-tolerance
+from storage subsystems. Simply stated, more number of intermediate layers are
+encountered in the I/O data path, with each passing layer adding its own syntax
+and semantics. Thereby increasing the overheads of request processing. In this
+paper, through comprehensive under-the-hood analysis of an object-storage node,
+we characterize the impact of object-store (and user-application) workloads on
+the OS I/O stack and its subsequent rippling effect on the underlying
+object-storage devices (OSD). We observe that the legacy architecture of the OS
+based I/O storage stack coupled with complex data management policies leads to
+a performance mismatch between what an end-storage device is capable of
+delivering and what it actually delivers in a production environment.
+Therefore, the gains derived from developing faster storage devices is often
+nullified. These issues get more pronounced in highly concurrent and
+multiplexed cloud environments. Owing to the associated issues of
+object-management and the vulnerabilities of the OS I/O software stacks, we
+discuss the potential of a new class of storage devices, known as
+Object-Drives. Samsung Key-Value SSD (KV-SSD) [1] and Seagate Kinetic Drive [2]
+are classic industrial implementations of object-drives, where host data
+management functionalities can be offloaded to the storage device. This leads
+towards the simplification of the over-all storage stack. Based on our
+analysis, we believe object-drives can alleviate object-stores from highly
+taxing overheads of data management with 20-38% time-savings over traditional
+Operating Systems (OS) stack.
+",2022-07-05T07:27:04Z
+An Example of Clifford Algebras Calculations with GiNaC,Vladimir V. Kisil,"  This example of Clifford algebras calculations uses GiNaC
+(http://www.ginac.de/) library, which includes a support for generic Clifford
+algebra starting from version~1.3.0. Both symbolic and numeric calculation are
+possible and can be blended with other functions of GiNaC. This calculations
+was made for the paper math.CV/0410399.
+  Described features of GiNaC are already available at PyGiNaC
+(http://sourceforge.net/projects/pyginac/) and due to course should propagate
+into other software like GNU Octave (http://www.octave.org/), gTybalt
+(http://www.fis.unipr.it/~stefanw/gtybalt.html), which use GiNaC library as
+their back-end.
+",2004-10-18T17:39:51Z
+"Accelerator-as-a-Service in Public Clouds: An Intra-Host Traffic
+  Management View for Performance Isolation in the Wild","Jiechen Zhao, Ran Shu, Katie Lim, Zewen Fan, Thomas Anderson, Mingyu Gao, Natalie Enright Jerger","  I/O devices in public clouds have integrated increasing numbers of hardware
+accelerators, e.g., AWS Nitro, Azure FPGA and Nvidia BlueField. However, such
+specialized compute (1) is not explicitly accessible to cloud users with
+performance guarantee, (2) cannot be leveraged simultaneously by both providers
+and users, unlike general-purpose compute (e.g., CPUs). Through ten
+observations, we present that the fundamental difficulty of democratizing
+accelerators is insufficient performance isolation support. The key obstacles
+to enforcing accelerator isolation are (1) too many unknown traffic patterns in
+public clouds and (2) too many possible contention sources in the datapath. In
+this work, instead of scheduling such complex traffic on-the-fly and augmenting
+isolation support on each system component, we propose to model traffic as
+network flows and proactively re-shape the traffic to avoid unpredictable
+contention. We discuss the implications of our findings on the design of future
+I/O management stacks and device interfaces.
+",2024-07-14T06:36:19Z
+"GPU-Initiated On-Demand High-Throughput Storage Access in the BaM System
+  Architecture","Zaid Qureshi, Vikram Sharma Mailthody, Isaac Gelado, Seung Won Min, Amna Masood, Jeongmin Park, Jinjun Xiong, CJ Newburn, Dmitri Vainbrand, I-Hsin Chung, Michael Garland, William Dally, Wen-mei Hwu","  Graphics Processing Units (GPUs) have traditionally relied on the host CPU to
+initiate access to the data storage. This approach is well-suited for GPU
+applications with known data access patterns that enable partitioning of their
+dataset to be processed in a pipelined fashion in the GPU. However, emerging
+applications such as graph and data analytics, recommender systems, or graph
+neural networks, require fine-grained, data-dependent access to storage. CPU
+initiation of storage access is unsuitable for these applications due to high
+CPU-GPU synchronization overheads, I/O traffic amplification, and long CPU
+processing latencies. GPU-initiated storage removes these overheads from the
+storage control path and, thus, can potentially support these applications at
+much higher speed. However, there is a lack of systems architecture and
+software stack that enable efficient GPU-initiated storage access. This work
+presents a novel system architecture, BaM, that fills this gap. BaM features a
+fine-grained software cache to coalesce data storage requests while minimizing
+I/O traffic amplification. This software cache communicates with the storage
+system via high-throughput queues that enable the massive number of concurrent
+threads in modern GPUs to make I/O requests at a high rate to fully utilize the
+storage devices and the system interconnect. Experimental results show that BaM
+delivers 1.0x and 1.49x end-to-end speed up for BFS and CC graph analytics
+benchmarks while reducing hardware costs by up to 21.7x over accessing the
+graph data from the host memory. Furthermore, BaM speeds up data-analytics
+workloads by 5.3x over CPU-initiated storage access on the same hardware.
+",2022-03-09T17:44:56Z
+"Understanding and Enhancing Linux Kernel-based Packet Switching on WiFi
+  Access Points","Shiqi Zhang, Mridul Gupta, Behnam Dezfouli","  As the number of WiFi devices and their traffic demands continue to rise, the
+need for a scalable and high-performance wireless infrastructure becomes
+increasingly essential. Central to this infrastructure are WiFi Access Points
+(APs), which facilitate packet switching between Ethernet and WiFi interfaces.
+Despite APs' reliance on the Linux kernel's data plane for packet switching,
+the detailed operations and complexities of switching packets between Ethernet
+and WiFi interfaces have not been investigated in existing works. This paper
+makes the following contributions towards filling this research gap. Through
+macro and micro-analysis of empirical experiments, our study reveals insights
+in two distinct categories. Firstly, while the kernel's statistics offer
+valuable insights into system operations, we identify and discuss potential
+pitfalls that can severely affect system analysis. For instance, we reveal the
+implications of device drivers on the meaning and accuracy of the statistics
+related to packet-switching tasks and processor utilization. Secondly, we
+analyze the impact of the packet switching path and core configuration on
+performance and power consumption. Specifically, we identify the differences in
+Ethernet-to-WiFi and WiFi-to-Ethernet data paths regarding processing
+components, multi-core utilization, and energy efficiency. We show that the
+WiFi-to-Ethernet data path leverages better multi-core processing and exhibits
+lower power consumption.
+",2024-08-02T05:15:38Z
+"EURETILE 2010-2012 summary: first three years of activity of the
+  European Reference Tiled Experiment","Pier Stanislao Paolucci, Iuliana Bacivarov, Gert Goossens, Rainer Leupers, Frédéric Rousseau, Christoph Schumacher, Lothar Thiele, Piero Vicini","  This is the summary of first three years of activity of the EURETILE FP7
+project 247846. EURETILE investigates and implements brain-inspired and
+fault-tolerant foundational innovations to the system architecture of massively
+parallel tiled computer architectures and the corresponding programming
+paradigm. The execution targets are a many-tile HW platform, and a many-tile
+simulator. A set of SW process - HW tile mapping candidates is generated by the
+holistic SW tool-chain using a combination of analytic and bio-inspired
+methods. The Hardware dependent Software is then generated, providing OS
+services with maximum efficiency/minimal overhead. The many-tile simulator
+collects profiling data, closing the loop of the SW tool chain. Fine-grain
+parallelism inside processes is exploited by optimized intra-tile compilation
+techniques, but the project focus is above the level of the elementary tile.
+The elementary HW tile is a multi-processor, which includes a fault tolerant
+Distributed Network Processor (for inter-tile communication) and ASIP
+accelerators. Furthermore, EURETILE investigates and implements the innovations
+for equipping the elementary HW tile with high-bandwidth, low-latency
+brain-like inter-tile communication emulating 3 levels of connection hierarchy,
+namely neural columns, cortical areas and cortex, and develops a dedicated
+cortical simulation benchmark: DPSNN-STDP (Distributed Polychronous Spiking
+Neural Net with synaptic Spiking Time Dependent Plasticity). EURETILE leverages
+on the multi-tile HW paradigm and SW tool-chain developed by the FET-ACA SHAPES
+Integrated Project (2006-2009).
+",2013-05-07T10:22:31Z
+Theory and practice,Donald E. Knuth,"  The author argues to Silicon Valley that the most important and powerful part
+of computer science is work that is simultaneously theoretical and practical.
+He particularly considers the intersection of the theory of algorithms and
+practical software development. He combines examples from the development of
+the TeX typesetting system with clever jokes, criticisms, and encouragements.
+",1991-11-01T00:00:00Z
+The Revolution Yet to Happen,"C. Gordon Bell, Jim Gray","  All information about physical objects including humans, buildings,
+processes, and organizations will be online. This trend is both desirable and
+inevitable. Cyberspace will provide the basis for wonderful new ways to inform,
+entertain, and educate people. The information and the corresponding systems
+will streamline commerce, but will also provide new levels of personal service,
+health care, and automation. The most significant benefit will be a
+breakthrough in our ability to remotely communicate with one another using all
+our senses.
+  The ACM and the transistor were born in 1947. At that time the stored program
+computer was a revolutionary idea and the transistor was just a curiosity. Both
+ideas evolved rapidly. By the mid 1960s integrated circuits appeared --
+allowing mass fabrication of transistors on silicon substrates. This allowed
+low-cost mass-produced computers. These technologies enabled extraordinary
+increases in processing speed and memory coupled with extraordinary price
+declines.
+  The only form of processing and memory more easily, cheaply, and rapidly
+fabricated is the human brain. Peter Cohrane (1996) estimates the brain to have
+a processing power of around 1000 million-million operations per second, (one
+Petaops) and a memory of 10 Terabytes. If current trends continue, computers
+could have these capabilities by 2047. Such computers could be 'on body'
+personal assistants able to recall everything one reads, hears, and sees.
+",1998-09-02T19:39:25Z
