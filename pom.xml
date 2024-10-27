@@ -30,6 +30,14 @@
 		<java.version>23</java.version>
 	</properties>
 	<dependencies>
+
+		<dependency>
+			<groupId>org.neo4j.springframework.data</groupId>
+			<artifactId>spring-data-neo4j-rx-spring-boot-starter-parent</artifactId>
+			<version>1.1.1</version>
+			<type>pom</type>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
@@ -41,6 +49,17 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+	<dependencyManagement>
+	<dependencies>
+		<dependency>
+		<groupId>org.springframework.data</groupId>
+		<artifactId>spring-data-bom</artifactId>
+		<version>2024.0.5</version>
+		<scope>import</scope>
+		<type>pom</type>
+		</dependency>
+	</dependencies>
+	</dependencyManagement>
 
 	<build>
 		<plugins>
