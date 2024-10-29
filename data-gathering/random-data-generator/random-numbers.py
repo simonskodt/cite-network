@@ -3,7 +3,7 @@ import random
 # Create random relationships for the Neo4J database
 LOWER, UPPER = 1, 1000
 
-print("CSV filename")
+print("CSV filename:")
 output_file = input()
 if not output_file.endswith(".csv"):
     output_file = output_file + ".csv"
@@ -26,7 +26,7 @@ with open(output_file, "w") as file:
         r2 = random.randint(LOWER, UPPER)
         while r1 == r2: # assumption that papers does not cite itself
             r1 = random.randint(LOWER, UPPER)
-        assert r1 != r2
+        assert r1 != r2, "No self-references allowed"
         file.write(f"{r1},{r2}\n")
 
 print(f"File {output_file} created")
