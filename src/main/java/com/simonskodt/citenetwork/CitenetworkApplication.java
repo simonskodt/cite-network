@@ -8,6 +8,7 @@ public class CitenetworkApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(CitenetworkApplication.class, args);
-	}
 
+		System.out.println("Hello, World!");
+	}
 }
