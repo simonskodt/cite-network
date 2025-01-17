@@ -1,10 +1,7 @@
 package com.simonskodt.citenetwork.entities;
 
-import java.util.List;
-
-import org.springframework.data.neo4j.core.schema.Id;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.neo4j.core.schema.Node;
-import org.springframework.data.neo4j.core.schema.Relationship;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,11 +13,9 @@ import lombok.With;
 @With
 @AllArgsConstructor
 @Node
-public class Author {
+public class Institution {
     @Id
-    private Long authorId;
+    private Long institutionId;
     private String name;
-
-    @Relationship(type = "AFFILIATED_WITH")
-    private List<Institution> institutions;
+    private String location;
 }

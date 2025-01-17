@@ -2,7 +2,6 @@ package com.simonskodt.citenetwork.entities;
 
 import java.util.List;
 
-import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
@@ -18,7 +17,7 @@ import lombok.With;
 @AllArgsConstructor
 @Node
 public class Paper {
-    @Id @GeneratedValue
+    @Id
     private Long id;
     private String title;
     private int publicationYear;
