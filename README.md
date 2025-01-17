@@ -15,7 +15,7 @@ This allows for playing around with the following different technologies:
 - Web applications in Java
 - Concurrency in Java
 
-## The Initial ER-Model
+### The Initial ER-Model
 
 Cardinality explained:
 
@@ -28,14 +28,14 @@ Cardinality explained:
 
 <img src="./resources/screenshots/er-model.png" alt="ER-Model" width="250" style="display: block; margin-left: auto; margin-right: auto;"/>
 
-## Commit Message Conventions
+## Installation
 
-I follow this convention for commit messages:
+To set up the repo locally, use the instructions in [BUILD_INSTRUCTIONS.md](./resources/BUILD_INSTRUCTIONS.md).
 
-- feat: New feature addition
-- fix: Bug correction
-- style: Styling updates
-- refactor: Code restructuring
-- test: Testing-related changes
-- docs: Documentation updates
-- chore: Routine maintenance
+## Contributing
+
+See [CONTRIBUTIONS.md](./resources/CONTRIBUTIONS.md) for guidelines on how to contribute to this project.
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for more details.
