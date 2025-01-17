@@ -21,6 +21,6 @@ public class Author {
     private Long authorId;
     private String name;
 
-    @Relationship(type = "AFFILIATED_WITH")
+    @Relationship(type = "AFFILIATED_WITH", direction = Relationship.Direction.OUTGOING)
     private List<Institution> institutions;
 }

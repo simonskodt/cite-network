@@ -19,6 +19,11 @@ public class PaperController {
         this.paperService = paperService;
     }
 
+    @GetMapping("/first10")
+    public List<String> findFirstTenPapers() {
+        return paperService.findFirstTenPapers();
+    }
+
     @GetMapping("/title/{title}")
     public Paper findPaperByTitle(@PathVariable String title) {
         return paperService.findPaperByTitle(title);
@@ -36,7 +41,9 @@ public class PaperController {
 
     @GetMapping("/year/{year}")
     public List<Paper> findPapersByPublicationYear(@PathVariable int year) {
-        return paperService.findPapersByPublicationYear(year);
+        List<Paper> papers = paperService.findPapersByPublicationYear(year);
+        System.out.println(papers);
+        return papers;
     }
 
     @GetMapping("/institution/{institutionName}")

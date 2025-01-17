@@ -15,6 +15,10 @@ public class PaperService {
         this.paperRepository = paperRepository;
     }
 
+    public List<String> findFirstTenPapers() {
+        return paperRepository.findFirstTenPapers();
+    }
+
     public Paper findPaperByTitle(String title) {
         return paperRepository.findPaperByTitle(title);
     }

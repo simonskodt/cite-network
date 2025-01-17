@@ -8,13 +8,16 @@ import org.springframework.data.neo4j.repository.query.Query;
 import com.simonskodt.citenetwork.entities.Paper;
 
 public interface PaperRepository extends Neo4jRepository<Paper, Long> {
+    @Query("MATCH (p:Paper) RETURN p.title LIMIT 10")
+    List<String> findFirstTenPapers();
+
     @Query("MATCH (p:Paper) WHERE p.title = $title RETURN p")
     Paper findPaperByTitle(String title);
 
-    @Query("MATCH (p:Paper)-[:CITES]->(cited:Paper) WHERE p.id = $paperId RETURN cited")
+    @Query("MATCH (p:Paper)-[:CITES]->(cited:Paper) WHERE p.paperId = $paperId RETURN cited")
     List<Paper> findPapersCitedByPaper(Long paperId);
 
-    @Query("MATCH (citing:Paper)-[:CITES]->(p:Paper) WHERE p.id = $paperId RETURN citing")
+    @Query("MATCH (citing:Paper)-[:CITES]->(p:Paper) WHERE p.paperId = $paperId RETURN citing")
     List<Paper> findPapersCitingPaper(Long paperId);
 
     @Query("MATCH (p:Paper) WHERE p.publicationYear = $year RETURN p")
