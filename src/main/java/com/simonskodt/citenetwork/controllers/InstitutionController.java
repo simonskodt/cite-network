@@ -10,7 +10,7 @@ import com.simonskodt.citenetwork.entities.Institution;
 import com.simonskodt.citenetwork.entities.Paper;
 import com.simonskodt.citenetwork.services.InstitutionService;
 
-import java.util.List;
+import reactor.core.publisher.Flux;
 
 @RestController
 @RequestMapping("/institutions")
@@ -22,17 +22,17 @@ public class InstitutionController {
     }
 
     @GetMapping("/authors/{institutionName}")
-    public List<Author> findAuthorsByInstitutionName(@PathVariable String institutionName) {
+    public Flux<Author> findAuthorsByInstitutionName(@PathVariable String institutionName) {
         return institutionService.findAuthorsByInstitutionName(institutionName);
     }
 
     @GetMapping("/papers/{institutionName}")
-    public List<Paper> findPapersByInstitutionName(@PathVariable String institutionName) {
+    public Flux<Paper> findPapersByInstitutionName(@PathVariable String institutionName) {
         return institutionService.findPapersByInstitutionName(institutionName);
     }
 
     @GetMapping("/author/{authorName}")
-    public List<Institution> findInstitutionsByAuthorName(@PathVariable String authorName) {
+    public Flux<Institution> findInstitutionsByAuthorName(@PathVariable String authorName) {
         return institutionService.findInstitutionsByAuthorName(authorName);
     }
 }

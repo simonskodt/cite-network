@@ -1,35 +1,37 @@
 package com.simonskodt.citenetwork.repositories;
 
-import java.util.List;
-
-import org.springframework.data.neo4j.repository.Neo4jRepository;
+import org.springframework.data.neo4j.repository.ReactiveNeo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.simonskodt.citenetwork.entities.Paper;
 
-public interface PaperRepository extends Neo4jRepository<Paper, Long> {
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+public interface PaperRepository extends ReactiveNeo4jRepository<Paper, Long> {
     @Query("MATCH (p:Paper) RETURN p.title LIMIT 10")
-    List<String> findFirstTenPapers();
+    Flux<String> findFirstTenPapers();
 
     @Query("MATCH (p:Paper) WHERE p.title = $title RETURN p")
-    Paper findPaperByTitle(String title);
+    Mono<Paper> findPaperByTitle(@Param("title") String title);
 
     @Query("MATCH (p:Paper)-[:CITES]->(cited:Paper) WHERE p.paperId = $paperId RETURN cited")
-    List<Paper> findPapersCitedByPaper(Long paperId);
+    Flux<Paper> findPapersCitedByPaper(@Param("paperId") Long paperId);
 
     @Query("MATCH (citing:Paper)-[:CITES]->(p:Paper) WHERE p.paperId = $paperId RETURN citing")
-    List<Paper> findPapersCitingPaper(Long paperId);
+    Flux<Paper> findPapersCitingPaper(@Param("paperId") Long paperId);
 
     @Query("MATCH (p:Paper) WHERE p.publicationYear = $year RETURN p")
-    List<Paper> findPapersByPublicationYear(int year);
+    Flux<Paper> findPapersByPublicationYear(@Param("year") int year);
 
     @Query("""
         MATCH (i:Institution)<-[:AFFILIATED_WITH]-(a:Author)-[:WRITTEN_BY]->(p:Paper) 
         WHERE i.name = $institutionName 
         RETURN p
     """)
-    List<Paper> findPapersByInstitutionName(String institutionName);
+    Flux<Paper> findPapersByInstitutionName(@Param("institutionName") String institutionName);
 
     @Query("MATCH (a:Author)-[:WRITTEN_BY]->(p:Paper) WHERE a.name = $authorName RETURN p")
-    List<Paper> findPapersByAuthorName(String authorName);
+    Flux<Paper> findPapersByAuthorName(@Param("authorName") String authorName);
 }

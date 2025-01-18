@@ -5,6 +5,7 @@ import org.springframework.data.neo4j.core.schema.Node;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.With;
 
@@ -12,6 +13,7 @@ import lombok.With;
 @Setter
 @With
 @AllArgsConstructor
+@NoArgsConstructor
 @Node
 public class Institution {
     @Id

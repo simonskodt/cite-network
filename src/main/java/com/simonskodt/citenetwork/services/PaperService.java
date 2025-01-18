@@ -1,11 +1,12 @@
 package com.simonskodt.citenetwork.services;
 
-import java.util.List;
-
 import org.springframework.stereotype.Service;
 
 import com.simonskodt.citenetwork.entities.Paper;
 import com.simonskodt.citenetwork.repositories.PaperRepository;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Service
 public class PaperService {
@@ -15,31 +16,31 @@ public class PaperService {
         this.paperRepository = paperRepository;
     }
 
-    public List<String> findFirstTenPapers() {
+    public Flux<String> findFirstTenPapers() {
         return paperRepository.findFirstTenPapers();
     }
 
-    public Paper findPaperByTitle(String title) {
+    public Mono<Paper> findPaperByTitle(String title) {
         return paperRepository.findPaperByTitle(title);
     }
 
-    public List<Paper> findPapersCitedByPaper(Long paperId) {
+    public Flux<Paper> findPapersCitedByPaper(Long paperId) {
         return paperRepository.findPapersCitedByPaper(paperId);
     }
 
-    public List<Paper> findPapersCitingPaper(Long paperId) {
+    public Flux<Paper> findPapersCitingPaper(Long paperId) {
         return paperRepository.findPapersCitingPaper(paperId);
     }
 
-    public List<Paper> findPapersByPublicationYear(int year) {
+    public Flux<Paper> findPapersByPublicationYear(int year) {
         return paperRepository.findPapersByPublicationYear(year);
     }
 
-    public List<Paper> findPapersByInstitutionName(String institutionName) {
+    public Flux<Paper> findPapersByInstitutionName(String institutionName) {
         return paperRepository.findPapersByInstitutionName(institutionName);
     }
 
-    public List<Paper> findPapersByAuthorName(String authorName) {
+    public Flux<Paper> findPapersByAuthorName(String authorName) {
         return paperRepository.findPapersByAuthorName(authorName);
     }
 }

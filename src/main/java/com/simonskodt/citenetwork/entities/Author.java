@@ -8,13 +8,15 @@ import org.springframework.data.neo4j.core.schema.Relationship;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.With;
 
 @Getter
 @Setter
 @With
-@AllArgsConstructor
+@AllArgsConstructor 
+@NoArgsConstructor
 @Node
 public class Author {
     @Id
@@ -23,4 +25,9 @@ public class Author {
 
     @Relationship(type = "AFFILIATED_WITH", direction = Relationship.Direction.OUTGOING)
     private List<Institution> institutions;
+
+	public Author(Long authorId, String name) {
+		this.authorId = authorId;
+		this.name = name;
+	}
 }

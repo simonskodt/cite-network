@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.simonskodt.citenetwork.entities.Author;
 import com.simonskodt.citenetwork.services.AuthorService;
 
+import reactor.core.publisher.Flux;
+
 import java.util.List;
 
 @RestController
@@ -20,12 +22,12 @@ public class AuthorController {
     }
 
     @GetMapping("/coauthors/{authorName}")
-    public List<Author> findCoAuthors(@PathVariable String authorName) {
+    public Flux<Author> findCoAuthors(@PathVariable String authorName) {
         return authorService.findCoAuthors(authorName);
     }
 
     @GetMapping("/paper/{title}")
-    public List<Author> findAuthorsByPaperTitle(@PathVariable String title) {
+    public Flux<Author> findAuthorsByPaperTitle(@PathVariable String title) {
         return authorService.findAuthorsByPaperTitle(title);
     }
 }
