@@ -290,9 +290,9 @@
 <div id="graph-area">
   <svg id="graph-svg">
     <defs>
-      <marker id="arrow" viewBox="0 -5 10 10" refX="20" refY="0"
-              markerWidth="6" markerHeight="6" orient="auto">
-        <path d="M0,-5L10,0L0,5" class="link-arrow"/>
+      <marker id="arrow" viewBox="0 -5 10 10" refX="26" refY="0"
+              markerWidth="8" markerHeight="8" orient="auto">
+        <path d="M0,-5L10,0L0,5" fill="#6b7db3"/>
       </marker>
     </defs>
     <g id="graph-root"></g>
@@ -329,10 +329,10 @@ const zoom = d3.zoom()
 svg.call(zoom);
 
 let simulation = d3.forceSimulation()
-  .force("link", d3.forceLink().id(d => d.paperId).distance(120))
-  .force("charge", d3.forceManyBody().strength(-300))
+  .force("link", d3.forceLink().id(d => d.paperId).distance(160))
+  .force("charge", d3.forceManyBody().strength(-400))
   .force("center", d3.forceCenter())
-  .force("collision", d3.forceCollide(30))
+  .force("collision", d3.forceCollide(40))
   .on("tick", ticked);
 
 let linkSel = root.append("g").attr("class", "links").selectAll(".link");
@@ -351,8 +351,8 @@ function render() {
     .join(
       enter => enter.append("line")
         .attr("class", "link")
-        .attr("stroke", "#475569")
-        .attr("stroke-width", 1.5)
+        .attr("stroke", "#6b7db3")
+        .attr("stroke-width", 2)
         .attr("marker-end", "url(#arrow)"),
       update => update,
       exit => exit.remove()
@@ -372,15 +372,15 @@ function render() {
           .on("mouseout", () => hideTooltip());
 
         g.append("circle")
-          .attr("r", 12)
+          .attr("r", 18)
           .attr("fill", d => colorFor(d))
           .attr("stroke", "#0f1117");
 
         g.append("text")
           .attr("dy", "0.35em")
           .attr("text-anchor", "middle")
-          .attr("y", 22)
-          .text(d => truncate(d.title, 22));
+          .attr("y", 28)
+          .text(d => truncate(d.title, 24));
 
         return g;
       },
@@ -486,8 +486,9 @@ function updateStatus() {
   setStatus(n === 0 ? "No papers loaded" : `${n} paper${n !== 1 ? "s" : ""} · ${l} citation${l !== 1 ? "s" : ""}`);
 }
 
-async function apiFetch(url) {
+async function apiFetch(url, { allow404 = false } = {}) {
   const res = await fetch(url);
+  if (res.status === 404 && allow404) return null;
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
 }
@@ -498,10 +499,31 @@ async function loadSample() {
     const papers = await apiFetch("/papers");
     addPapersToGraph(papers, null);
     setResultsList(papers);
-    fitGraph();
+
+    // Fetch citations between the loaded papers in parallel
+    setStatus("Loading citation edges…");
+    await Promise.allSettled(papers.map(p => loadCitationsFor(p.paperId)));
+    render(); // draw citation edges now that all links are in state
+
+    updateStatus();
+    // Fit after simulation has had time to spread nodes
+    setTimeout(fitGraph, 800);
   } catch (e) {
     setStatus("Error: " + e.message);
   }
+}
+
+async function loadCitationsFor(paperId) {
+  const cited = await apiFetch(`/papers/${paperId}/cited-by`);
+  cited.forEach(p => {
+    const exists = state.links.some(l =>
+      (l.source?.paperId ?? l.source) == paperId &&
+      (l.target?.paperId ?? l.target) == p.paperId
+    );
+    if (!exists) state.links.push({ source: paperId, target: p.paperId });
+  });
+  simulation.force("link").links(state.links);
+  simulation.alpha(0.1).restart();
 }
 
 async function search() {
@@ -518,11 +540,16 @@ async function search() {
   };
 
   try {
-    const result = await apiFetch(urls[type]);
+    const result = await apiFetch(urls[type], { allow404: type === "title" });
+    if (result === null) {
+      setResultsList([]);
+      updateStatus();
+      return;
+    }
     const papers = Array.isArray(result) ? result : [result];
     addPapersToGraph(papers, null);
     setResultsList(papers);
-    fitGraph();
+    setTimeout(fitGraph, 600);
   } catch (e) {
     setStatus("Error: " + e.message);
     setResultsList([]);
@@ -533,9 +560,14 @@ async function expandCitedBy(paperId) {
   setStatus("Loading citations…");
   try {
     const papers = await apiFetch(`/papers/${paperId}/cited-by`);
+    const anchorNode = state.nodes.get(String(paperId));
     papers.forEach(p => {
       if (!state.nodes.has(String(p.paperId))) {
-        state.nodes.set(String(p.paperId), { ...p, x: Math.random() * 200 - 100, y: Math.random() * 200 - 100 });
+        state.nodes.set(String(p.paperId), {
+          ...p,
+          x: (anchorNode?.x ?? 0) + Math.random() * 100 - 50,
+          y: (anchorNode?.y ?? 0) + Math.random() * 100 - 50,
+        });
       }
       const exists = state.links.some(l =>
         (l.source?.paperId ?? l.source) == paperId &&
@@ -544,6 +576,7 @@ async function expandCitedBy(paperId) {
       if (!exists) state.links.push({ source: paperId, target: p.paperId });
     });
     render();
+    setTimeout(fitGraph, 600);
   } catch (e) {
     setStatus("Error: " + e.message);
   }
@@ -553,9 +586,14 @@ async function expandCiting(paperId) {
   setStatus("Loading citing papers…");
   try {
     const papers = await apiFetch(`/papers/${paperId}/citing`);
+    const anchorNode = state.nodes.get(String(paperId));
     papers.forEach(p => {
       if (!state.nodes.has(String(p.paperId))) {
-        state.nodes.set(String(p.paperId), { ...p, x: Math.random() * 200 - 100, y: Math.random() * 200 - 100 });
+        state.nodes.set(String(p.paperId), {
+          ...p,
+          x: (anchorNode?.x ?? 0) + Math.random() * 100 - 50,
+          y: (anchorNode?.y ?? 0) + Math.random() * 100 - 50,
+        });
       }
       const exists = state.links.some(l =>
         (l.source?.paperId ?? l.source) == p.paperId &&
@@ -564,6 +602,7 @@ async function expandCiting(paperId) {
       if (!exists) state.links.push({ source: p.paperId, target: paperId });
     });
     render();
+    setTimeout(fitGraph, 600);
   } catch (e) {
     setStatus("Error: " + e.message);
   }
