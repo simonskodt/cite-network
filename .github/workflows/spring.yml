@@ -1,9 +1,8 @@
-name: Verify the PR
-run-name: ${{ github.actor }} is verify the PR.
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "**" ]
   pull_request:
     branches: [ main ]
 
@@ -12,28 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out branch
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up JDK 23
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '23'
           distribution: 'temurin'
           cache: maven
 
-      - name: Set up environment variables
-        run: echo "Connecting with the password..."
-        env:
-          NEO4J_URI: ${{ secrets.NEO4J_URI }}
-          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
-          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+      # Runs compile → test → package → verify in one pass.
+      # Unit tests use Mockito; integration tests use the embedded Neo4j harness
+      # (neo4j-harness) so no external database is required.
+      # ByteBuddy experimental mode for Java 23+ is set via maven-surefire-plugin
+      # argLine in pom.xml.
+      - name: Build, test and package
+        run: mvn -B verify
 
-      - name: Compile the project
-        run: mvn compile
-
-      - name: Run test case
-        run: mvn test
-
-      - name: Build with Maven
-        run: mvn clean install package
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: cite-network-jar
+          path: target/cite-network-*.jar
+          retention-days: 14
