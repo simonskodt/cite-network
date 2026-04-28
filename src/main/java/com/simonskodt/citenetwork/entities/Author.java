@@ -6,17 +6,6 @@ import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.With;
-
-@Getter
-@Setter
-@With
-@AllArgsConstructor 
-@NoArgsConstructor
 @Node
 public class Author {
     @Id
@@ -26,8 +15,25 @@ public class Author {
     @Relationship(type = "AFFILIATED_WITH", direction = Relationship.Direction.OUTGOING)
     private List<Institution> institutions;
 
-	public Author(Long authorId, String name) {
-		this.authorId = authorId;
-		this.name = name;
-	}
+    public Author() {}
+
+    public Author(Long authorId, String name) {
+        this.authorId = authorId;
+        this.name = name;
+    }
+
+    public Author(Long authorId, String name, List<Institution> institutions) {
+        this.authorId = authorId;
+        this.name = name;
+        this.institutions = institutions;
+    }
+
+    public Long getAuthorId() { return authorId; }
+    public void setAuthorId(Long authorId) { this.authorId = authorId; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public List<Institution> getInstitutions() { return institutions; }
+    public void setInstitutions(List<Institution> institutions) { this.institutions = institutions; }
 }
