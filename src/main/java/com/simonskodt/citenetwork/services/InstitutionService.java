@@ -1,13 +1,14 @@
 package com.simonskodt.citenetwork.services;
 
-import java.util.List;
-
 import org.springframework.stereotype.Service;
 
 import com.simonskodt.citenetwork.entities.Author;
 import com.simonskodt.citenetwork.entities.Institution;
 import com.simonskodt.citenetwork.entities.Paper;
 import com.simonskodt.citenetwork.repositories.InstitutionRepository;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Service
 public class InstitutionService {
@@ -17,15 +18,23 @@ public class InstitutionService {
         this.institutionRepository = institutionRepository;
     }
 
-    public List<Author> findAuthorsByInstitutionName(String institutionName) {
+    public Flux<Author> findAuthorsByInstitutionName(String institutionName) {
         return institutionRepository.findAuthorsByInstitutionName(institutionName);
     }
 
-    public List<Paper> findPapersByInstitutionName(String institutionName) {
+    public Flux<Paper> findPapersByInstitutionName(String institutionName) {
         return institutionRepository.findPapersByInstitutionName(institutionName);
     }
 
-    public List<Institution> findInstitutionsByAuthorName(String authorName) {
+    public Flux<Institution> findInstitutionsByAuthorName(String authorName) {
         return institutionRepository.findInstitutionsByAuthorName(authorName);
+    }
+
+    public Mono<Institution> createInstitution(Institution institution) {
+        return institutionRepository.save(institution);
+    }
+
+    public Mono<Void> deleteInstitution(Long institutionId) {
+        return institutionRepository.deleteById(institutionId);
     }
 }
