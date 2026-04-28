@@ -1,41 +1,166 @@
-# Academic Research Citation Network
+# Academic Citation Network
 
-A project to put together the courses I attend at Università della Svizzera italiana.
+An interactive graph-based explorer showing how academic papers cite each other. Built at Università della Svizzera italiana to integrate Spring Boot, Neo4j, and D3.js.
 
-<img src="./resources/screenshots/courses.png" alt="ER-Model" width="400" style="display: block; margin-left: auto; margin-right: auto;"/>
+---
 
-## Project Goal
+## Screenshots
 
-I will try to build a website that shows how academic papers cite each other.
-This allows for playing around with the following different technologies:
+**Dark mode — 20 papers, 29 citation edges**
 
-- Maven
-- Spring Framework
-- Neo4J
-- Web applications in Java
-- Concurrency in Java
+<img src="./resources/screenshots/ui-dark-loaded.png" alt="Citation network in dark mode" width="800"/>
 
-### The Initial ER-Model
+**Light mode**
 
-Cardinality explained:
+<img src="./resources/screenshots/ui-light-loaded.png" alt="Citation network in light mode" width="800"/>
 
-| Value (left) | Value (right) | Meaning |
-|--------------|---------------|---------|
-| \|o          | o\|           | Zero or one |
-| \|\|         | \|\|          | Exactly one |
-| }o           | o{            | Zero or more (no upper limit) |
-| }\|          | \|{           | One or more (no upper limit) |
+**Search results — results appear in sidebar; click to add papers individually or press Add all**
 
-<img src="./resources/screenshots/er-model.png" alt="ER-Model" width="250" style="display: block; margin-left: auto; margin-right: auto;"/>
+<img src="./resources/screenshots/ui-search-results.png" alt="Author search showing Add all to graph button" width="800"/>
 
-## Installation
+---
 
-To set up the repo locally, use the instructions in [BUILD_INSTRUCTIONS.md](./resources/BUILD_INSTRUCTIONS.md).
+## Features
+
+| Feature | Description |
+|---|---|
+| Force-directed graph | D3.js v7 simulation with directional citation arrows, colour-coded by decade |
+| Search | By title (partial match), author, publication year, or institution |
+| Selective graph building | Search results appear in the sidebar only — click a result to add it to the graph, or press **Add all to graph** |
+| Expand on demand | **Cited by this** / **Citing this** buttons load connected papers around the selected node |
+| Add new paper | Press **+ New** to create a paper (title, year, DOI, authors); it is persisted in Neo4j |
+| Light / dark mode | Toggle with ☀/🌙 — preference saved in `localStorage` |
+| Node detail panel | Click any node to see its DOI, year, authors, and expand/remove actions |
+| Zoom & pan | Mouse scroll, +/− buttons, or ⊡ to fit the full graph |
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Spring Boot 3.3.5, Spring WebFlux (reactive, Netty) |
+| Database | Neo4j 5 via Spring Data Neo4j (reactive repositories, Flux/Mono) |
+| Frontend | Vanilla JS + D3.js v7, served as a static classpath resource |
+| Dev server | `mock-server.js` — Node.js mock with 20 papers, no Neo4j needed |
+| Tests | JUnit 5, Mockito, `@WebFluxTest`, `@DataNeo4jTest` + embedded neo4j-harness |
+| CI | GitHub Actions — `mvn verify` (compile → test → package in one pass) |
+
+---
+
+## Data model
+
+```
+(Paper)-[:CITES]->(Paper)
+(Paper)-[:WRITTEN_BY]->(Author)
+(Author)-[:AFFILIATED_WITH]->(Institution)
+```
+
+### Entities
+
+| Node | Key properties |
+|---|---|
+| `Paper` | `paperId`, `title`, `publicationYear`, `doi` |
+| `Author` | `authorId`, `name` |
+| `Institution` | `institutionId`, `name`, `location` |
+
+### Original ER model
+
+<img src="./resources/screenshots/er-model.png" alt="ER Model" width="280"/>
+
+---
+
+## REST API
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/papers` | First 20 papers |
+| `GET` | `/papers/title/{title}` | Paper whose title contains the query |
+| `GET` | `/papers/author/{name}` | Papers by author name |
+| `GET` | `/papers/year/{year}` | Papers by publication year |
+| `GET` | `/papers/institution/{name}` | Papers by institution |
+| `GET` | `/papers/{id}/cited-by` | Papers that this paper cites |
+| `GET` | `/papers/{id}/citing` | Papers that cite this paper |
+| `POST` | `/papers` | Create a paper (JSON body) |
+| `POST` | `/papers/{citingId}/cites/{citedId}` | Add a citation edge |
+| `DELETE` | `/papers/{id}` | Delete a paper |
+| `GET` | `/authors/coauthors/{name}` | Co-authors of the given author |
+
+---
+
+## Running
+
+### Option A — Frontend only (no Neo4j required)
+
+A Node.js mock server serves the UI and fakes all API endpoints with 20 sample papers and 29 citation edges.
+
+```bash
+node mock-server.js
+# Open http://localhost:8080
+```
+
+In Claude Code the **cite-network-ui** launch configuration (`.claude/launch.json`) starts this automatically from the Preview panel.
+
+### Option B — Full stack (Spring Boot + Neo4j)
+
+**Prerequisites:** Java 23+, Maven, Neo4j 5.
+
+1. Set Neo4j credentials in `src/main/resources/application.properties`:
+
+   ```properties
+   spring.neo4j.uri=bolt://localhost:7687
+   spring.neo4j.authentication.username=neo4j
+   spring.neo4j.authentication.password=your-password
+   ```
+
+2. Start the app:
+
+   ```bash
+   mvn spring-boot:run
+   # Open http://localhost:8080
+   ```
+
+### Option C — Docker Compose
+
+```bash
+docker-compose up
+# Open http://localhost:8080
+```
+
+---
+
+## Tests
+
+Tests use the embedded Neo4j harness — **no external database required**.
+
+```bash
+mvn verify
+```
+
+| Layer | Annotation | Tests |
+|---|---|---|
+| Repository | `@DataNeo4jTest` + harness | Cypher queries against a real in-process Neo4j |
+| Service | `@ExtendWith(MockitoExtension.class)` | Business logic with mocked repositories |
+| Controller | `@WebFluxTest` + `@MockBean` | HTTP routing, status codes, response shapes |
+
+---
+
+## CI
+
+GitHub Actions runs on every push and every PR targeting `main`:
+
+```
+Checkout → Set up JDK 23 → mvn verify → Upload JAR artifact (14-day retention)
+```
+
+The embedded Neo4j harness means CI needs no database service container.
+
+---
 
 ## Contributing
 
-See [CONTRIBUTIONS.md](./resources/CONTRIBUTIONS.md) for guidelines on how to contribute to this project.
+See [CONTRIBUTIONS.md](./resources/CONTRIBUTIONS.md) for contribution guidelines.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for more details.
+MIT — see the LICENSE file for details.
