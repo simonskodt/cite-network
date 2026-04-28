@@ -8,6 +8,7 @@ import com.simonskodt.citenetwork.entities.Paper;
 import com.simonskodt.citenetwork.repositories.InstitutionRepository;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Service
 public class InstitutionService {
@@ -27,5 +28,13 @@ public class InstitutionService {
 
     public Flux<Institution> findInstitutionsByAuthorName(String authorName) {
         return institutionRepository.findInstitutionsByAuthorName(authorName);
+    }
+
+    public Mono<Institution> createInstitution(Institution institution) {
+        return institutionRepository.save(institution);
+    }
+
+    public Mono<Void> deleteInstitution(Long institutionId) {
+        return institutionRepository.deleteById(institutionId);
     }
 }

@@ -16,7 +16,7 @@ public class PaperService {
         this.paperRepository = paperRepository;
     }
 
-    public Flux<String> findFirstTenPapers() {
+    public Flux<Paper> findFirstTenPapers() {
         return paperRepository.findFirstTenPapers();
     }
 
@@ -42,5 +42,17 @@ public class PaperService {
 
     public Flux<Paper> findPapersByAuthorName(String authorName) {
         return paperRepository.findPapersByAuthorName(authorName);
+    }
+
+    public Mono<Paper> createPaper(Paper paper) {
+        return paperRepository.save(paper);
+    }
+
+    public Mono<Void> addCitation(Long citingId, Long citedId) {
+        return paperRepository.addCitation(citingId, citedId);
+    }
+
+    public Mono<Void> deletePaper(Long paperId) {
+        return paperRepository.deleteById(paperId);
     }
 }

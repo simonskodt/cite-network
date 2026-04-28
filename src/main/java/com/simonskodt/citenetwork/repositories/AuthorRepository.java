@@ -15,8 +15,8 @@ public interface AuthorRepository extends ReactiveNeo4jRepository<Author, Long> 
     Flux<Author> findAuthorsByPaperTitle(@Param("title") String title);
 
     @Query("""
-        MATCH (a1:Author)-[:WRITTEN_BY]->(p:Paper)<-[:WRITTEN_BY]-(a2:Author) 
-        WHERE a1.name = $authorName 
+        MATCH (a1:Author)<-[:WRITTEN_BY]-(p:Paper)-[:WRITTEN_BY]->(a2:Author)
+        WHERE a1.name = $authorName
         RETURN DISTINCT a2
     """)
     Flux<Author> findCoAuthors(@Param("authorName") String authorName);

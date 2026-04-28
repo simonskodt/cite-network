@@ -19,7 +19,7 @@ public interface InstitutionRepository extends ReactiveNeo4jRepository<Instituti
     Flux<Author> findAuthorsByInstitutionName(@Param("institutionName") String institutionName);
 
     @Query("""
-        MATCH (i:Institution)<-[:AFFILIATED_WITH]-(a:Author)-[:WRITTEN_BY]->(p:Paper)
+        MATCH (i:Institution)<-[:AFFILIATED_WITH]-(a:Author)<-[:WRITTEN_BY]-(p:Paper)
         WHERE i.name = $institutionName
         RETURN p
     """)    

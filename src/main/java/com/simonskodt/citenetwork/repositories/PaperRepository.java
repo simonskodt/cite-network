@@ -10,8 +10,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface PaperRepository extends ReactiveNeo4jRepository<Paper, Long> {
-    @Query("MATCH (p:Paper) RETURN p.title LIMIT 10")
-    Flux<String> findFirstTenPapers();
+    @Query("MATCH (p:Paper) RETURN p LIMIT 10")
+    Flux<Paper> findFirstTenPapers();
 
     @Query("MATCH (p:Paper) WHERE p.title = $title RETURN p")
     Mono<Paper> findPaperByTitle(@Param("title") String title);
@@ -25,13 +25,16 @@ public interface PaperRepository extends ReactiveNeo4jRepository<Paper, Long> {
     @Query("MATCH (p:Paper) WHERE p.publicationYear = $year RETURN p")
     Flux<Paper> findPapersByPublicationYear(@Param("year") int year);
 
+    @Query("MATCH (citing:Paper {paperId: $citingId}), (cited:Paper {paperId: $citedId}) CREATE (citing)-[:CITES]->(cited)")
+    Mono<Void> addCitation(@Param("citingId") Long citingId, @Param("citedId") Long citedId);
+
     @Query("""
-        MATCH (i:Institution)<-[:AFFILIATED_WITH]-(a:Author)-[:WRITTEN_BY]->(p:Paper) 
-        WHERE i.name = $institutionName 
+        MATCH (i:Institution)<-[:AFFILIATED_WITH]-(a:Author)<-[:WRITTEN_BY]-(p:Paper)
+        WHERE i.name = $institutionName
         RETURN p
     """)
     Flux<Paper> findPapersByInstitutionName(@Param("institutionName") String institutionName);
 
-    @Query("MATCH (a:Author)-[:WRITTEN_BY]->(p:Paper) WHERE a.name = $authorName RETURN p")
+    @Query("MATCH (p:Paper)-[:WRITTEN_BY]->(a:Author) WHERE a.name = $authorName RETURN p")
     Flux<Paper> findPapersByAuthorName(@Param("authorName") String authorName);
 }

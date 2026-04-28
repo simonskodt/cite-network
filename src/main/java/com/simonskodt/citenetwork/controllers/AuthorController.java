@@ -1,16 +1,13 @@
 package com.simonskodt.citenetwork.controllers;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 import com.simonskodt.citenetwork.entities.Author;
 import com.simonskodt.citenetwork.services.AuthorService;
 
 import reactor.core.publisher.Flux;
-
-import java.util.List;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/authors")
@@ -29,5 +26,17 @@ public class AuthorController {
     @GetMapping("/paper/{title}")
     public Flux<Author> findAuthorsByPaperTitle(@PathVariable String title) {
         return authorService.findAuthorsByPaperTitle(title);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<Author> createAuthor(@RequestBody Author author) {
+        return authorService.createAuthor(author);
+    }
+
+    @DeleteMapping("/{authorId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> deleteAuthor(@PathVariable Long authorId) {
+        return authorService.deleteAuthor(authorId);
     }
 }

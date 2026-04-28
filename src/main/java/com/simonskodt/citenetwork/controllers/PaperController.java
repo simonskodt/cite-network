@@ -1,9 +1,8 @@
 package com.simonskodt.citenetwork.controllers;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.simonskodt.citenetwork.entities.Paper;
 import com.simonskodt.citenetwork.services.PaperService;
@@ -20,31 +19,30 @@ public class PaperController {
         this.paperService = paperService;
     }
 
-    @GetMapping("/first10")
-    public Flux<String> findFirstTenPapers() {
+    @GetMapping
+    public Flux<Paper> findFirstTenPapers() {
         return paperService.findFirstTenPapers();
     }
 
     @GetMapping("/title/{title}")
     public Mono<Paper> findPaperByTitle(@PathVariable String title) {
-        return paperService.findPaperByTitle(title);
+        return paperService.findPaperByTitle(title)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Paper not found")));
     }
 
-    @GetMapping("/citedBy/{paperId}")
+    @GetMapping("/{paperId}/cited-by")
     public Flux<Paper> findPapersCitedByPaper(@PathVariable Long paperId) {
         return paperService.findPapersCitedByPaper(paperId);
     }
 
-    @GetMapping("/citing/{paperId}")
+    @GetMapping("/{paperId}/citing")
     public Flux<Paper> findPapersCitingPaper(@PathVariable Long paperId) {
         return paperService.findPapersCitingPaper(paperId);
     }
 
     @GetMapping("/year/{year}")
     public Flux<Paper> findPapersByPublicationYear(@PathVariable int year) {
-        Flux<Paper> papers = paperService.findPapersByPublicationYear(year);
-        System.out.println(papers);
-        return papers;
+        return paperService.findPapersByPublicationYear(year);
     }
 
     @GetMapping("/institution/{institutionName}")
@@ -55,5 +53,23 @@ public class PaperController {
     @GetMapping("/author/{authorName}")
     public Flux<Paper> findPapersByAuthorName(@PathVariable String authorName) {
         return paperService.findPapersByAuthorName(authorName);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<Paper> createPaper(@RequestBody Paper paper) {
+        return paperService.createPaper(paper);
+    }
+
+    @PostMapping("/{citingId}/cites/{citedId}")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<Void> addCitation(@PathVariable Long citingId, @PathVariable Long citedId) {
+        return paperService.addCitation(citingId, citedId);
+    }
+
+    @DeleteMapping("/{paperId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> deletePaper(@PathVariable Long paperId) {
+        return paperService.deletePaper(paperId);
     }
 }
