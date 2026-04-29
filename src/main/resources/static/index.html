@@ -410,6 +410,10 @@
       color: var(--text);
     }
     #graph-controls button:hover { background: var(--surface2); }
+    #graph-controls button.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    #graph-controls button.active:hover { opacity: 0.85; }
 
     /* ── Tooltip ──────────────────────────────────────────────────────────── */
     #tooltip {
@@ -682,6 +686,7 @@
     <button id="zoom-in-btn"  title="Zoom in">+</button>
     <button id="zoom-out-btn" title="Zoom out">−</button>
     <button id="fit-btn"      title="Fit to screen">⊡</button>
+    <button id="flow-btn"     title="Toggle citation flow">∿</button>
   </div>
 
   <div id="tooltip"></div>
@@ -789,6 +794,7 @@ const sim = d3.forceSimulation()
   .on("tick", ticked);
 
 let linkSel = root.append("g").attr("class", "links").selectAll(".link");
+const gFlow = root.append("g").attr("class", "flow"); // particles: above links, below nodes
 let nodeSel = root.append("g").attr("class", "nodes").selectAll(".node");
 
 // Draft edge line for hold-to-draw citation (rendered above links, below nodes)
@@ -890,6 +896,7 @@ function render() {
   sim.force("link").links(links);
   sim.alpha(0.3).restart();
   updateStatus();
+  if (flowActive) updateFlowDots();
 }
 
 function ticked() {
@@ -927,9 +934,113 @@ function colorFor(d) {
   return colorScale(d.publicationYear || 2005);
 }
 
+// ── Animations ────────────────────────────────────────────────────────────────
+let flowActive = false;
+let flowRafId  = null;
+let flowT0     = null;
+
+function updateFlowDots() {
+  const links = state.links.filter(l =>
+    typeof l.source === "object" && typeof l.target === "object");
+  // Two particles per link, offset by half a cycle
+  const dotData = links.flatMap(l => [
+    { link: l, phase: 0.00 },
+    { link: l, phase: 0.50 },
+  ]);
+  gFlow.selectAll(".flow-dot")
+    .data(dotData)
+    .join("circle")
+      .attr("class", "flow-dot")
+      .attr("r", 3.5)
+      .attr("pointer-events", "none");
+}
+
+function animateFlow(ts) {
+  if (!flowActive) return;
+  if (flowT0 === null) flowT0 = ts;
+  const cycleMs = 2200;
+
+  gFlow.selectAll(".flow-dot").each(function(d) {
+    const src = d.link.source, tgt = d.link.target;
+    if (!src || !tgt || src.x == null) return;
+    const t   = ((ts - flowT0) / cycleMs + d.phase) % 1;
+    const dx  = tgt.x - src.x, dy = tgt.y - src.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1) return;
+    const margin = 22 / len;          // skip over node circle (r≈18 + gap)
+    if (margin >= 0.48) return;       // nodes too close to animate
+    const pt   = margin + t * (1 - 2 * margin);
+    const fade = Math.min(t * 6, 1, (1 - t) * 6);
+    d3.select(this)
+      .attr("cx", src.x + pt * dx)
+      .attr("cy", src.y + pt * dy)
+      .attr("opacity", fade * 0.88)
+      .attr("fill", colorFor(src));
+  });
+
+  flowRafId = requestAnimationFrame(animateFlow);
+}
+
+function startFlow() {
+  flowActive = true; flowT0 = null;
+  document.getElementById("flow-btn").classList.add("active");
+  updateFlowDots();
+  flowRafId = requestAnimationFrame(animateFlow);
+}
+
+function stopFlow() {
+  flowActive = false;
+  if (flowRafId) { cancelAnimationFrame(flowRafId); flowRafId = null; }
+  document.getElementById("flow-btn").classList.remove("active");
+  gFlow.selectAll(".flow-dot").remove();
+}
+
+function bfsRipple(source) {
+  // Build undirected adjacency so the ripple spreads both along and against citations
+  const adj = new Map();
+  state.nodes.forEach((_, id) => adj.set(id, []));
+  state.links.forEach(l => {
+    const s = String(l.source?.paperId ?? l.source);
+    const t = String(l.target?.paperId ?? l.target);
+    adj.get(s)?.push(t);
+    adj.get(t)?.push(s);
+  });
+
+  const dist = new Map([[String(source.paperId), 0]]);
+  const queue = [String(source.paperId)];
+  while (queue.length) {
+    const cur = queue.shift(), d = dist.get(cur);
+    adj.get(cur)?.forEach(nb => {
+      if (!dist.has(nb)) { dist.set(nb, d + 1); queue.push(nb); }
+    });
+  }
+
+  dist.forEach((d, id) => {
+    const node = state.nodes.get(id);
+    if (!node) return;
+    setTimeout(() => {
+      if (!state.nodes.has(id)) return;
+      gFlow.append("circle")
+        .attr("cx", node.x).attr("cy", node.y)
+        .attr("r", 18)
+        .attr("fill", "none")
+        .attr("stroke", d === 0 ? "#f59e0b" : "#93c5fd")
+        .attr("stroke-width", d === 0 ? 3 : 2)
+        .attr("opacity", 0.85)
+        .attr("pointer-events", "none")
+        .transition().duration(680).ease(d3.easeCubicOut)
+          .attr("r", 44)
+          .attr("stroke-width", 0.3)
+          .attr("opacity", 0)
+          .remove();
+    }, d * 130);
+  });
+}
+
 // ── Node selection ────────────────────────────────────────────────────────────
 function selectNode(d) {
   state.selected = d;
+  bfsRipple(d);
   render();
   showDetail(d);
   refreshBadges();
@@ -1697,6 +1808,7 @@ applyTheme(localStorage.getItem("theme") || "dark");
 document.getElementById("zoom-in-btn").onclick  = () => svg.transition().call(zoom.scaleBy, 1.4);
 document.getElementById("zoom-out-btn").onclick = () => svg.transition().call(zoom.scaleBy, 0.7);
 document.getElementById("fit-btn").onclick = fitGraph;
+document.getElementById("flow-btn").onclick = () => flowActive ? stopFlow() : startFlow();
 
 function fitGraph() {
   const { width, height } = svg.node().getBoundingClientRect();
