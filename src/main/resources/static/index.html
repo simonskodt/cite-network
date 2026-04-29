@@ -1263,12 +1263,12 @@ async function search() {
     institution: `/papers/institution/${encodeURIComponent(q)}`,
   };
   try {
-    const raw = await apiFetch(urls[type], { allow404: type === "title" });
-    if (raw === null) {
+    const raw = await apiFetch(urls[type]);
+    const papers = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+    if (!papers.length) {
       setResultsList([], { showAddAll: false, label: "No results" });
       updateStatus(); return;
     }
-    const papers = Array.isArray(raw) ? raw : [raw];
     // Results appear in sidebar but are NOT added to the graph automatically.
     // The user chooses which to add by clicking individual items or "Add all".
     setResultsList(papers, { showAddAll: true });
@@ -1377,7 +1377,7 @@ function setResultsList(papers, { showAddAll = true, label, updateBase = true } 
           </div>
           <span class="graph-badge ${inGraph ? "done" : "add"}"
                 title="${inGraph ? "Remove from graph" : "Add to graph"}">
-            ${inGraph ? "✓" : "+"}
+            ${inGraph ? "−" : "+"}
           </span>
         </div>`;
     }).join("");
@@ -1428,7 +1428,7 @@ function refreshBadges() {
     if (!badge) return;
     badge.className   = `graph-badge ${inGraph ? "done" : "add"}`;
     badge.title       = inGraph ? "Remove from graph" : "Add to graph";
-    badge.textContent = inGraph ? "✓" : "+";
+    badge.textContent = inGraph ? "−" : "+";
   });
 
   // Update the results-bar action buttons

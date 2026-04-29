@@ -75,10 +75,10 @@ class PaperRepositoryTest {
     }
 
     @Test
-    void findPaperByTitle_returnsMatchingPaper() {
+    void findPapersByTitle_returnsExactMatch() {
         savePaper(1L, "Graph Theory Basics", 2021, "doi/1");
 
-        StepVerifier.create(paperRepository.findPaperByTitle("Graph Theory Basics"))
+        StepVerifier.create(paperRepository.findPapersByTitle("Graph Theory Basics"))
                 .assertNext(p -> {
                     Assertions.assertEquals("Graph Theory Basics", p.getTitle());
                     Assertions.assertEquals(2021, p.getPublicationYear());
@@ -87,8 +87,28 @@ class PaperRepositoryTest {
     }
 
     @Test
-    void findPaperByTitle_returnsEmptyForUnknown() {
-        StepVerifier.create(paperRepository.findPaperByTitle("Nonexistent"))
+    void findPapersByTitle_returnsPartialMatch() {
+        savePaper(1L, "dette er en test", 2024, "doi/1");
+        savePaper(2L, "another test paper", 2023, "doi/2");
+        savePaper(3L, "unrelated work", 2022, "doi/3");
+
+        StepVerifier.create(paperRepository.findPapersByTitle("test"))
+                .expectNextCount(2)
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByTitle_isCaseInsensitive() {
+        savePaper(1L, "Graph Theory Basics", 2021, "doi/1");
+
+        StepVerifier.create(paperRepository.findPapersByTitle("GRAPH THEORY"))
+                .expectNextCount(1)
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByTitle_returnsEmptyForUnknown() {
+        StepVerifier.create(paperRepository.findPapersByTitle("Nonexistent"))
                 .verifyComplete();
     }
 

@@ -20,8 +20,8 @@ public class PaperService {
         return paperRepository.findFirstTenPapers();
     }
 
-    public Mono<Paper> findPaperByTitle(String title) {
-        return paperRepository.findPaperByTitle(title);
+    public Flux<Paper> findPapersByTitle(String title) {
+        return paperRepository.findPapersByTitle(title);
     }
 
     public Flux<Paper> findPapersCitedByPaper(Long paperId) {

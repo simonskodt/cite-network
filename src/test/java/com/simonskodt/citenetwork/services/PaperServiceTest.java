@@ -38,20 +38,21 @@ class PaperServiceTest {
     }
 
     @Test
-    void findPaperByTitle_returnsPaper() {
-        Paper p = paper(1L, "Neo4j Paper");
-        when(paperRepository.findPaperByTitle("Neo4j Paper")).thenReturn(Mono.just(p));
+    void findPapersByTitle_returnsMatchingPapers() {
+        Paper p1 = paper(1L, "Neo4j Paper");
+        Paper p2 = paper(2L, "Neo4j at Scale");
+        when(paperRepository.findPapersByTitle("neo4j")).thenReturn(Flux.just(p1, p2));
 
-        StepVerifier.create(paperService.findPaperByTitle("Neo4j Paper"))
-                .expectNext(p)
+        StepVerifier.create(paperService.findPapersByTitle("neo4j"))
+                .expectNext(p1, p2)
                 .verifyComplete();
     }
 
     @Test
-    void findPaperByTitle_returnsEmptyWhenNotFound() {
-        when(paperRepository.findPaperByTitle("Missing")).thenReturn(Mono.empty());
+    void findPapersByTitle_returnsEmptyWhenNotFound() {
+        when(paperRepository.findPapersByTitle("missing")).thenReturn(Flux.empty());
 
-        StepVerifier.create(paperService.findPaperByTitle("Missing"))
+        StepVerifier.create(paperService.findPapersByTitle("missing"))
                 .verifyComplete();
     }
 

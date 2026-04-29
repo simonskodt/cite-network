@@ -2,7 +2,6 @@ package com.simonskodt.citenetwork.controllers;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.simonskodt.citenetwork.entities.Paper;
 import com.simonskodt.citenetwork.services.PaperService;
@@ -25,9 +24,8 @@ public class PaperController {
     }
 
     @GetMapping("/title/{title}")
-    public Mono<Paper> findPaperByTitle(@PathVariable String title) {
-        return paperService.findPaperByTitle(title)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Paper not found")));
+    public Flux<Paper> findPapersByTitle(@PathVariable String title) {
+        return paperService.findPapersByTitle(title);
     }
 
     @GetMapping("/{paperId}/cited-by")

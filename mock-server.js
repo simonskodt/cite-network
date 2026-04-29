@@ -88,7 +88,7 @@ function routeGet(url) {
   const titleM = url.match(/^\/papers\/title\/(.+)$/);
   if (titleM) {
     const q = decodeURIComponent(titleM[1]).toLowerCase();
-    return papers.find(p => p.title.toLowerCase().includes(q)) || null;
+    return papers.filter(p => p.title.toLowerCase().includes(q));
   }
 
   const citedByM = url.match(/^\/papers\/(\d+)\/cited-by$/);

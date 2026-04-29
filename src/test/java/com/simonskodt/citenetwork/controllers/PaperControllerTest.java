@@ -38,23 +38,24 @@ class PaperControllerTest {
     }
 
     @Test
-    void GET_paperByTitle_returnsPaper() {
-        when(paperService.findPaperByTitle("Graph Theory")).thenReturn(Mono.just(paper(1L, "Graph Theory")));
+    void GET_papersByTitle_returnsMatchingPapers() {
+        when(paperService.findPapersByTitle("graph")).thenReturn(
+                Flux.just(paper(1L, "Graph Theory"), paper(2L, "Graph Databases")));
 
-        webTestClient.get().uri("/papers/title/Graph Theory")
+        webTestClient.get().uri("/papers/title/graph")
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(Paper.class)
-                .value(p -> org.junit.jupiter.api.Assertions.assertEquals("Graph Theory", p.getTitle()));
+                .expectBodyList(Paper.class).hasSize(2);
     }
 
     @Test
-    void GET_paperByTitle_returns404WhenNotFound() {
-        when(paperService.findPaperByTitle("Missing")).thenReturn(Mono.empty());
+    void GET_papersByTitle_returnsEmptyListWhenNotFound() {
+        when(paperService.findPapersByTitle("missing")).thenReturn(Flux.empty());
 
-        webTestClient.get().uri("/papers/title/Missing")
+        webTestClient.get().uri("/papers/title/missing")
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(0);
     }
 
     @Test

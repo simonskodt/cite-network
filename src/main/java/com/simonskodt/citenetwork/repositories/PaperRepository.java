@@ -13,8 +13,8 @@ public interface PaperRepository extends ReactiveNeo4jRepository<Paper, Long> {
     @Query("MATCH (p:Paper) RETURN p LIMIT 10")
     Flux<Paper> findFirstTenPapers();
 
-    @Query("MATCH (p:Paper) WHERE p.title = $title RETURN p")
-    Mono<Paper> findPaperByTitle(@Param("title") String title);
+    @Query("MATCH (p:Paper) WHERE toLower(p.title) CONTAINS toLower($title) RETURN p")
+    Flux<Paper> findPapersByTitle(@Param("title") String title);
 
     @Query("MATCH (p:Paper)-[:CITES]->(cited:Paper) WHERE p.paperId = $paperId RETURN cited")
     Flux<Paper> findPapersCitedByPaper(@Param("paperId") Long paperId);
