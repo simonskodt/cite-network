@@ -427,6 +427,61 @@
     #detail-panel::-webkit-scrollbar  { width: 4px; }
     #results-panel::-webkit-scrollbar-thumb,
     #detail-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* Draft arrowhead fill matches the draft edge colour */
+    #arrow-draft path { fill: var(--accent-text); }
+
+    /* ── Help modal ───────────────────────────────────────────────────────── */
+    #help-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 500;
+      align-items: center; justify-content: center;
+    }
+    #help-overlay.visible { display: flex; }
+    #help-modal {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 20px 24px;
+      max-width: 460px; width: 92%; max-height: 80vh; overflow-y: auto;
+      position: relative;
+    }
+    #help-modal h2 { font-size: 0.9rem; color: var(--accent-text); margin-bottom: 12px; }
+    #help-modal h3 {
+      font-size: 0.68rem; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.05em; margin: 14px 0 5px;
+    }
+    .help-row { display: flex; gap: 9px; margin-bottom: 6px; align-items: flex-start; }
+    .help-key {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 4px; padding: 1px 7px;
+      font-size: 0.68rem; color: var(--accent-text);
+      white-space: nowrap; flex-shrink: 0; line-height: 1.7;
+    }
+    .help-desc { font-size: 0.78rem; color: var(--text); line-height: 1.5; }
+    #help-close {
+      position: absolute; top: 10px; right: 12px;
+      background: none; border: none; color: var(--text-muted);
+      font-size: 1rem; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+    }
+    #help-close:hover { background: var(--surface2); color: var(--text); }
+
+    /* ── Node context menu ────────────────────────────────────────────────── */
+    #node-ctx-menu {
+      display: none; position: fixed;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 7px; box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+      z-index: 400; min-width: 160px; padding: 4px 0;
+    }
+    #node-ctx-menu.visible { display: block; }
+    .ctx-item {
+      display: block; width: 100%; padding: 7px 14px;
+      background: none; border: none; border-radius: 0;
+      text-align: left; font-size: 0.8rem; color: var(--text);
+      cursor: pointer; transition: background 0.1s; white-space: nowrap;
+    }
+    .ctx-item:hover { background: var(--surface2); color: var(--text); }
+    .ctx-item.danger { color: #e57373; }
+    .ctx-item.danger:hover { background: rgba(192,57,43,0.12); }
+    .ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
   </style>
 </head>
 <body>
@@ -437,6 +492,7 @@
   <div id="sidebar-header">
     <h1>Citation Network</h1>
     <div style="display:flex;gap:5px">
+      <button id="help-btn" class="hdr-btn" title="How to use" aria-label="Help" style="font-size:0.85rem;font-weight:700">?</button>
       <button id="settings-btn" class="hdr-btn" title="Settings" aria-label="Settings">
         <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -594,6 +650,10 @@
               markerWidth="8" markerHeight="8" orient="auto">
         <path d="M0,-5L10,0L0,5"/>
       </marker>
+      <marker id="arrow-draft" viewBox="0 -5 10 10" refX="10" refY="0"
+              markerWidth="8" markerHeight="8" orient="auto">
+        <path d="M0,-5L10,0L0,5"/>
+      </marker>
     </defs>
     <g id="graph-root"></g>
   </svg>
@@ -609,6 +669,40 @@
   <div id="tooltip"></div>
 </div>
 
+<!-- ── Help modal ─────────────────────────────────────────────────────────── -->
+<div id="help-overlay">
+  <div id="help-modal">
+    <button id="help-close">✕</button>
+    <h2>How to use the Citation Network</h2>
+    <h3>Navigating</h3>
+    <div class="help-row"><span class="help-key">Scroll</span><span class="help-desc">Zoom in / out</span></div>
+    <div class="help-row"><span class="help-key">Drag background</span><span class="help-desc">Pan the graph</span></div>
+    <div class="help-row"><span class="help-key">Click node</span><span class="help-desc">Select — see title, DOI, authors, and actions in the panel below</span></div>
+    <div class="help-row"><span class="help-key">Right-click node</span><span class="help-desc">Context menu: expand citations or remove the node</span></div>
+    <h3>Adding papers</h3>
+    <div class="help-row"><span class="help-key">Load</span><span class="help-desc">Load N seed papers into the graph; set the number to the left</span></div>
+    <div class="help-row"><span class="help-key">Search bar</span><span class="help-desc">Find papers by title, author, year, or institution; results appear in the sidebar — click to add individually</span></div>
+    <div class="help-row"><span class="help-key">+ New</span><span class="help-desc">Create a new paper (or paste text for AI extraction)</span></div>
+    <div class="help-row"><span class="help-key">Bulk</span><span class="help-desc">Import multiple papers by DOI (CrossRef) or free-text via AI</span></div>
+    <h3>Drawing citation arrows</h3>
+    <div class="help-row"><span class="help-key">Hold node ~400 ms</span><span class="help-desc">Enter drag mode — drag the dashed arrow to the target node</span></div>
+    <div class="help-row"><span class="help-key">Double-click node</span><span class="help-desc">Enter persistent draw mode — then click any other node to connect</span></div>
+    <div class="help-row"><span class="help-key">Esc</span><span class="help-desc">Cancel drawing at any time</span></div>
+    <h3>Exploring connections</h3>
+    <div class="help-row"><span class="help-key">Cited by this</span><span class="help-desc">Expand outward — load papers this node cites</span></div>
+    <div class="help-row"><span class="help-key">Citing this</span><span class="help-desc">Expand inward — load papers that cite this node</span></div>
+    <div class="help-row"><span class="help-key">Filter tabs</span><span class="help-desc">Switch the sidebar between All / Seed / Added papers</span></div>
+  </div>
+</div>
+
+<!-- ── Node context menu ──────────────────────────────────────────────────── -->
+<div id="node-ctx-menu">
+  <button class="ctx-item" id="ctx-cited-by">Cited by this</button>
+  <button class="ctx-item" id="ctx-citing">Citing this</button>
+  <div class="ctx-sep"></div>
+  <button class="ctx-item danger" id="ctx-remove">Remove from graph</button>
+</div>
+
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
@@ -620,6 +714,7 @@ let lastResults    = [];       // papers from last search / load-sample
 let currentFilter  = "all";   // "all" | "seed" | "user"
 let pendingBulk    = [];       // parsed papers waiting for user confirmation
 let allUserPapers  = [];       // every paper saved by the user this session
+let allSeedPapers  = [];       // every paper loaded via the Load button this session
 let currentVisible = [];       // the currently rendered result items (for refreshBadges)
 
 function setFilter(f) {
@@ -651,7 +746,7 @@ let nodeSel = root.append("g").attr("class", "nodes").selectAll(".node");
 const draftLine = root.select("g.links").append("line")
   .attr("class", "draft-edge")
   .style("display", "none")
-  .attr("marker-end", "url(#arrow)");
+  .attr("marker-end", "url(#arrow-draft)");
 
 // Edge-draw state
 let edgeDraw   = null;   // null | { src: nodeData }
@@ -661,6 +756,19 @@ let holdMoved  = false;
 
 function onHoldMove(e) {
   if (Math.abs(e.clientX - holdStartX) + Math.abs(e.clientY - holdStartY) > 8) holdMoved = true;
+}
+
+function cancelEdgeDraw() {
+  edgeDraw = null;
+  clearTimeout(holdTimer);
+  draftLine.style("display", "none");
+  svg.classed("edge-drawing", false);
+  nodeSel.classed("edge-src", false).classed("edge-target", false);
+}
+
+function dedupeById(papers) {
+  const seen = new Set();
+  return papers.filter(p => { const id = String(p.paperId); if (seen.has(id)) return false; seen.add(id); return true; });
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -688,7 +796,25 @@ function render() {
             .on("start", dragstarted)
             .on("drag",  dragged)
             .on("end",   dragended))
-          .on("click",     (_, d) => selectNode(d))
+          .on("click", (_, d) => {
+            if (edgeDraw?.persistent) {
+              const srcId = edgeDraw.src.paperId;
+              cancelEdgeDraw();
+              if (d.paperId !== srcId) createCitation(srcId, d.paperId);
+              return;
+            }
+            selectNode(d);
+          })
+          .on("dblclick", (e, d) => {
+            e.stopPropagation();
+            cancelEdgeDraw();
+            edgeDraw = { src: d, persistent: true };
+            svg.classed("edge-drawing", true);
+            nodeSel.classed("edge-src", nd => nd.paperId === d.paperId);
+            draftLine.attr("x1", d.x).attr("y1", d.y).attr("x2", d.x).attr("y2", d.y)
+                     .style("display", null);
+          })
+          .on("contextmenu", (e, d) => { e.preventDefault(); e.stopPropagation(); showContextMenu(e, d); })
           .on("mouseover", (e, d) => {
             showTip(e, d);
             if (edgeDraw && d.paperId !== edgeDraw.src.paperId)
@@ -862,6 +988,7 @@ async function loadSample() {
     const papers = await apiFetch(`/papers?limit=${n}`);
     papers.forEach(p => addNodeToGraph(p));
     render();
+    papers.forEach(p => { if (!allSeedPapers.some(s => s.paperId === p.paperId)) allSeedPapers.push(p); });
     setResultsList(papers, { showAddAll: false, label: `${papers.length} papers in sample` });
 
     setStatus("Loading citation edges…");
@@ -940,9 +1067,9 @@ async function addAllToGraph(papers) {
 function setResultsList(papers, { showAddAll = true, label, updateBase = true } = {}) {
   if (updateBase) lastResults = papers;
 
-  // Show filter tabs whenever there are results
+  // Show filter tabs whenever any papers have ever been loaded
   const filterRow = document.getElementById("filter-row");
-  filterRow.style.display = (lastResults.length > 0 || allUserPapers.length > 0) ? "flex" : "none";
+  filterRow.style.display = (lastResults.length > 0 || allSeedPapers.length > 0 || allUserPapers.length > 0) ? "flex" : "none";
 
   const panel = document.getElementById("results-panel");
   const visible = currentFilter === "all" ? papers
@@ -1491,7 +1618,18 @@ function showTip(event, d) {
   moveTip(event);
 }
 function hideTip() { tipEl.classList.remove("visible"); }
-svg.node().addEventListener("mousemove", e => { if (tipEl.classList.contains("visible")) moveTip(e); });
+svg.node().addEventListener("mousemove", e => {
+  if (tipEl.classList.contains("visible")) moveTip(e);
+  if (edgeDraw?.persistent) {
+    const t = d3.zoomTransform(svg.node());
+    const rect = svg.node().getBoundingClientRect();
+    const [sx, sy] = t.invert([e.clientX - rect.left, e.clientY - rect.top]);
+    draftLine.attr("x2", sx).attr("y2", sy);
+  }
+});
+svg.node().addEventListener("click", e => {
+  if (edgeDraw?.persistent && !e.target.closest(".node")) cancelEdgeDraw();
+});
 function moveTip(e) {
   const r = document.getElementById("graph-area").getBoundingClientRect();
   let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
@@ -1511,12 +1649,10 @@ centreSimulation();
 document.getElementById("search-btn").onclick = search;
 document.getElementById("search-input").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && edgeDraw) {
-    edgeDraw = null;
-    clearTimeout(holdTimer);
-    draftLine.style("display", "none");
-    svg.classed("edge-drawing", false);
-    nodeSel.classed("edge-src", false).classed("edge-target", false);
+  if (e.key === "Escape") {
+    if (edgeDraw) cancelEdgeDraw();
+    document.getElementById("help-overlay").classList.remove("visible");
+    hideContextMenu();
   }
 });
 document.getElementById("load-sample-btn").onclick = loadSample;
@@ -1539,14 +1675,76 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
         label: n ? `${n} added paper${n !== 1 ? "s" : ""}` : null,
         updateBase: false,
       });
+    } else if (currentFilter === "seed") {
+      const n = allSeedPapers.length;
+      setResultsList(allSeedPapers, {
+        showAddAll: true,
+        label: n ? `${n} seed paper${n !== 1 ? "s" : ""}` : null,
+        updateBase: false,
+      });
     } else {
-      setResultsList(lastResults, { showAddAll: currentFilter === "all", label: null });
+      // "all" — show the union of every paper loaded this session
+      const all = dedupeById([...allSeedPapers, ...allUserPapers]);
+      if (all.length) {
+        setResultsList(all, {
+          showAddAll: true,
+          label: `${all.length} paper${all.length !== 1 ? "s" : ""}`,
+          updateBase: false,
+        });
+      } else {
+        setResultsList(lastResults, { showAddAll: true, label: null });
+      }
     }
   });
 });
 
 // Initialise AI-gated UI
 refreshAIVisibility();
+
+// ── Help modal ────────────────────────────────────────────────────────────────
+document.getElementById("help-btn").onclick = () =>
+  document.getElementById("help-overlay").classList.toggle("visible");
+document.getElementById("help-close").onclick = () =>
+  document.getElementById("help-overlay").classList.remove("visible");
+document.getElementById("help-overlay").addEventListener("click", e => {
+  if (e.target === document.getElementById("help-overlay"))
+    document.getElementById("help-overlay").classList.remove("visible");
+});
+
+// ── Node context menu ─────────────────────────────────────────────────────────
+let ctxTarget = null;
+
+function showContextMenu(event, d) {
+  ctxTarget = d;
+  selectNode(d);
+  const menu = document.getElementById("node-ctx-menu");
+  menu.style.left = event.clientX + "px";
+  menu.style.top  = event.clientY + "px";
+  menu.classList.add("visible");
+  requestAnimationFrame(() => {
+    const r = menu.getBoundingClientRect();
+    if (r.right  > window.innerWidth)  menu.style.left = (event.clientX - r.width)  + "px";
+    if (r.bottom > window.innerHeight) menu.style.top  = (event.clientY - r.height) + "px";
+  });
+}
+
+function hideContextMenu() {
+  document.getElementById("node-ctx-menu").classList.remove("visible");
+  ctxTarget = null;
+}
+
+document.getElementById("ctx-cited-by").onclick = () => {
+  if (ctxTarget) { expandCitedBy(ctxTarget.paperId); hideContextMenu(); }
+};
+document.getElementById("ctx-citing").onclick = () => {
+  if (ctxTarget) { expandCiting(ctxTarget.paperId); hideContextMenu(); }
+};
+document.getElementById("ctx-remove").onclick = () => {
+  if (ctxTarget) { removeNode(ctxTarget.paperId); hideContextMenu(); }
+};
+document.addEventListener("click", e => {
+  if (!document.getElementById("node-ctx-menu").contains(e.target)) hideContextMenu();
+});
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function showToast(msg, ms = 3200) {

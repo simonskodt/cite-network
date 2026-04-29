@@ -88,6 +88,49 @@ class PaperControllerTest {
     }
 
     @Test
+    void GET_papersByAuthor_returnsPapers() {
+        when(paperService.findPapersByAuthorName("Alice")).thenReturn(Flux.just(paper(1L, "Alice's Paper")));
+
+        webTestClient.get().uri("/papers/author/Alice")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class)
+                .value(list -> org.junit.jupiter.api.Assertions.assertEquals("Alice's Paper", list.get(0).getTitle()));
+    }
+
+    @Test
+    void GET_papersByAuthor_returnsEmptyListWhenNoneFound() {
+        when(paperService.findPapersByAuthorName("Unknown")).thenReturn(Flux.empty());
+
+        webTestClient.get().uri("/papers/author/Unknown")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(0);
+    }
+
+    @Test
+    void GET_papersByInstitution_returnsPapers() {
+        when(paperService.findPapersByInstitutionName("MIT")).thenReturn(Flux.just(paper(3L, "MIT Paper")));
+
+        webTestClient.get().uri("/papers/institution/MIT")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(1);
+    }
+
+    @Test
+    void GET_papers_withLimitParam_returnsResults() {
+        when(paperService.findFirstTenPapers()).thenReturn(
+                Flux.just(paper(1L, "A"), paper(2L, "B"), paper(3L, "C")));
+
+        webTestClient.get().uri("/papers?limit=3")
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(3);
+    }
+
+    @Test
     void POST_papers_createsPaper() {
         Paper newPaper = paper(10L, "New Paper");
         when(paperService.createPaper(any())).thenReturn(Mono.just(newPaper));

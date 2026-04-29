@@ -83,6 +83,36 @@ class PaperServiceTest {
     }
 
     @Test
+    void findPapersByAuthorName_returnsPapers() {
+        when(paperRepository.findPapersByAuthorName("Alice")).thenReturn(Flux.just(paper(1L, "Alice's Paper")));
+
+        StepVerifier.create(paperService.findPapersByAuthorName("Alice"))
+                .assertNext(p -> org.junit.jupiter.api.Assertions.assertEquals("Alice's Paper", p.getTitle()))
+                .verifyComplete();
+
+        verify(paperRepository).findPapersByAuthorName("Alice");
+    }
+
+    @Test
+    void findPapersByAuthorName_returnsEmptyWhenNoneFound() {
+        when(paperRepository.findPapersByAuthorName("Unknown")).thenReturn(Flux.empty());
+
+        StepVerifier.create(paperService.findPapersByAuthorName("Unknown"))
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByInstitutionName_delegatesToRepository() {
+        when(paperRepository.findPapersByInstitutionName("MIT")).thenReturn(Flux.just(paper(3L, "MIT Paper")));
+
+        StepVerifier.create(paperService.findPapersByInstitutionName("MIT"))
+                .expectNextCount(1)
+                .verifyComplete();
+
+        verify(paperRepository).findPapersByInstitutionName("MIT");
+    }
+
+    @Test
     void createPaper_savesAndReturnsPaper() {
         Paper p = paper(5L, "New Paper");
         when(paperRepository.save(p)).thenReturn(Mono.just(p));
