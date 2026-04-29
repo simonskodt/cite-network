@@ -191,4 +191,30 @@ class PaperRepositoryTest {
                 .then(paperRepository.findPaperByTitle("Deletable")))
                 .verifyComplete();
     }
+
+    @Test
+    void deleteById_detachesCitationRelationships() {
+        savePaper(1L, "Citing", 2021, "doi/1");
+        savePaper(2L, "Cited",  2020, "doi/2");
+
+        try (var session = driver.session()) {
+            session.run("MATCH (a:Paper {paperId: 1}), (b:Paper {paperId: 2}) CREATE (a)-[:CITES]->(b)");
+        }
+
+        StepVerifier.create(paperRepository.deleteById(1L))
+                .verifyComplete();
+
+        // Citing paper is gone
+        StepVerifier.create(paperRepository.findPaperByTitle("Citing"))
+                .verifyComplete();
+
+        // Cited paper still exists — only the citing node was deleted
+        StepVerifier.create(paperRepository.findPaperByTitle("Cited"))
+                .assertNext(p -> Assertions.assertEquals("Cited", p.getTitle()))
+                .verifyComplete();
+
+        // No paper is citing "Cited" anymore — relationship was detached
+        StepVerifier.create(paperRepository.findPapersCitingPaper(2L))
+                .verifyComplete();
+    }
 }

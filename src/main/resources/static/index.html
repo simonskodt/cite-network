@@ -479,13 +479,14 @@
     #help-close:hover { background: var(--surface2); color: var(--text); }
 
     /* ── Node context menu ────────────────────────────────────────────────── */
-    #node-ctx-menu {
+    #node-ctx-menu, #sidebar-ctx-menu {
       display: none; position: fixed;
       background: var(--surface); border: 1px solid var(--border2);
       border-radius: 7px; box-shadow: 0 4px 18px rgba(0,0,0,0.35);
       z-index: 400; min-width: 160px; padding: 4px 0;
     }
     #node-ctx-menu.visible { display: block; }
+    #sidebar-ctx-menu.visible { display: block; }
     .ctx-item {
       display: block; width: 100%; padding: 7px 14px;
       background: none; border: none; border-radius: 0;
@@ -496,6 +497,9 @@
     .ctx-item.danger { color: #e57373; background: rgba(192,57,43,0.10); }
     .ctx-item.danger:hover { background: rgba(192,57,43,0.28); color: #ef5350; }
     .ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+    .sctx-msg { padding: 6px 14px 2px; font-size: 0.78rem; color: var(--text2); }
+    .sctx-btns { display: flex; padding: 4px 8px 6px; gap: 4px; }
+    .sctx-btns .ctx-item { flex: 1; border-radius: 5px; text-align: center; }
   </style>
 </head>
 <body>
@@ -721,6 +725,20 @@
   <button class="ctx-item danger" id="ctx-remove">Remove from graph</button>
 </div>
 
+<!-- ── Sidebar item context menu ─────────────────────────────────────────── -->
+<div id="sidebar-ctx-menu">
+  <div id="sctx-default">
+    <button class="ctx-item danger" id="sctx-delete">Delete from database</button>
+  </div>
+  <div id="sctx-confirm-state" style="display:none">
+    <div class="sctx-msg">Delete permanently?</div>
+    <div class="sctx-btns">
+      <button class="ctx-item danger" id="sctx-confirm">Confirm</button>
+      <button class="ctx-item"        id="sctx-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
@@ -728,12 +746,25 @@ const state = {
   links: [],         // {source, target} by paperId
   selected: null,
 };
-let lastResults    = [];       // papers from last search / load-sample
-let currentFilter  = "all";   // "all" | "seed" | "user"
-let pendingBulk    = [];       // parsed papers waiting for user confirmation
-let allUserPapers  = [];       // every paper saved by the user this session
-let allSeedPapers  = [];       // every paper loaded via the Load button this session
-let currentVisible = [];       // the currently rendered result items (for refreshBadges)
+let lastResults     = [];       // papers from last search / load-sample
+let currentFilter   = "all";   // "all" | "seed" | "user"
+let pendingBulk     = [];       // parsed papers waiting for user confirmation
+let allSeedPapers   = [];       // every paper loaded via the Load button this session
+let currentVisible  = [];       // the currently rendered result items (for refreshBadges)
+let filterTabActive = false;    // true when sidebar shows graph contents, not search results
+
+// User-created papers persisted in localStorage across sessions
+function loadUserPapersFromStorage() {
+  try { return JSON.parse(localStorage.getItem("user-papers") || "[]"); } catch { return []; }
+}
+function saveUserPaperToStorage(paper) {
+  const stored = loadUserPapersFromStorage();
+  if (!stored.some(p => String(p.paperId) === String(paper.paperId))) {
+    stored.push({ ...paper, _source: "user" });
+    localStorage.setItem("user-papers", JSON.stringify(stored));
+  }
+}
+let allUserPapers = loadUserPapersFromStorage();
 
 function setFilter(f) {
   currentFilter = f;
@@ -1026,15 +1057,36 @@ function removeNodes(paperIds) {
     state.selected = null;
     document.getElementById("detail-panel").classList.remove("visible");
   }
-  render(); refreshBadges();
+  render();
+  if (filterTabActive) refreshFilterTabView(); else refreshBadges();
 }
 
 function removeNodesAnimated(paperIds) {
   const ids = new Set(paperIds.map(String));
+
+  // Save state for undo before animating
+  const savedPapers = paperIds.map(id => state.nodes.get(String(id))).filter(Boolean);
+  const savedLinks  = state.links
+    .filter(l => ids.has(String(l.source?.paperId ?? l.source)) || ids.has(String(l.target?.paperId ?? l.target)))
+    .map(l => ({ source: l.source?.paperId ?? l.source, target: l.target?.paperId ?? l.target }));
+
   document.querySelectorAll(".result-item").forEach(el => {
     if (ids.has(el.dataset.id)) el.classList.add("removing");
   });
-  setTimeout(() => removeNodes(paperIds), 700);
+
+  setTimeout(() => {
+    removeNodes(paperIds);
+    const n = savedPapers.length;
+    showToast(`Removed ${n} paper${n !== 1 ? "s" : ""} from graph`, {
+      ms: 5500,
+      undoFn: () => {
+        savedPapers.forEach(p => addNodeToGraph(p));
+        savedLinks.forEach(l => pushLink(l.source, l.target));
+        render();
+        if (filterTabActive) refreshFilterTabView(); else refreshBadges();
+      },
+    });
+  }, 700);
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
@@ -1070,7 +1122,8 @@ async function loadSample() {
     papers.forEach(p => addNodeToGraph(p));
     render();
     papers.forEach(p => { if (!allSeedPapers.some(s => s.paperId === p.paperId)) allSeedPapers.push(p); });
-    setResultsList(papers, { showAddAll: false, label: `${papers.length} papers in sample` });
+    setResultsList(papers, { showAddAll: true, label: `${papers.length} papers in sample` });
+    filterTabActive = true;
 
     setStatus("Loading citation edges…");
     await Promise.allSettled(papers.map(p => loadCitationsFor(p.paperId)));
@@ -1084,7 +1137,11 @@ async function loadSample() {
 async function search() {
   const type = document.getElementById("search-type").value;
   const q    = document.getElementById("search-input").value.trim();
-  if (!q) { document.getElementById("search-input").focus(); return; }
+  if (!q) {
+    setResultsList([], { showAddAll: false, label: "Enter a search term above." });
+    updateStatus();
+    return;
+  }
 
   setFilter("all");
   setStatus("Searching…");
@@ -1145,8 +1202,29 @@ async function addAllToGraph(papers) {
 }
 
 // ── Results list ──────────────────────────────────────────────────────────────
+function refreshFilterTabView() {
+  if (currentFilter === "user") {
+    // Show all user-created papers across sessions, not just those in the graph
+    const papers  = allUserPapers;
+    const inCount = papers.filter(p => state.nodes.has(String(p.paperId))).length;
+    const label   = papers.length
+      ? `${papers.length} added paper${papers.length !== 1 ? "s" : ""}${inCount < papers.length ? ` · ${inCount} in graph` : " · all in graph"}`
+      : "No added papers yet";
+    setResultsList(papers, { showAddAll: true, label, updateBase: false });
+    return;
+  }
+  const allInGraph = [...state.nodes.values()];
+  const filtered   = currentFilter === "all" ? allInGraph
+    : allInGraph.filter(p => (p._source || "seed") === "seed");
+  const src   = currentFilter === "seed" ? "seed " : "";
+  const n     = filtered.length;
+  const label = n ? `${n} ${src}paper${n !== 1 ? "s" : ""} in graph`
+                  : `No ${src}papers in graph`;
+  setResultsList(allInGraph, { showAddAll: true, label, updateBase: false });
+}
+
 function setResultsList(papers, { showAddAll = true, label, updateBase = true } = {}) {
-  if (updateBase) lastResults = papers;
+  if (updateBase) { lastResults = papers; filterTabActive = false; }
 
   // Show filter tabs whenever there are papers in the graph
   const filterRow = document.getElementById("filter-row");
@@ -1217,6 +1295,14 @@ function setResultsList(papers, { showAddAll = true, label, updateBase = true } 
           || lastResults.find(p => String(p.paperId) === id);
         if (paper) addPaperAndSelect(paper);
       }
+    });
+
+    // Right-click: show sidebar context menu for delete
+    el.addEventListener("contextmenu", e => {
+      e.preventDefault();
+      const paper = currentVisible.find(p => String(p.paperId) === el.dataset.id)
+        || lastResults.find(p => String(p.paperId) === el.dataset.id);
+      if (paper) showSidebarCtxMenu(e, paper);
     });
   });
 
@@ -1349,7 +1435,8 @@ async function savePaper(p) {
       doi:             p.doi || null,
       authors:         (p.authors || []).map(a => typeof a === "string" ? { name: a } : a),
     }),
-  }).then(r => { if (!r.ok) throw new Error(r.statusText); return r.json(); });
+  }).then(r => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
+    .then(paper => ({ ...paper, _source: "user" }));
 }
 
 // ── Settings panel ────────────────────────────────────────────────────────────
@@ -1428,6 +1515,7 @@ document.getElementById("new-paper-form").addEventListener("submit", async e => 
   try {
     const paper = await savePaper({ title, publicationYear: year ? parseInt(year) : null, doi, authors });
     allUserPapers.push(paper);
+    saveUserPaperToStorage(paper);
     document.getElementById("add-paper-form").classList.remove("open");
     document.getElementById("new-paper-form").reset();
     setResultsList([paper], { showAddAll: true, label: "1 new paper" });
@@ -1507,7 +1595,7 @@ document.getElementById("bulk-add-btn").onclick = async () => {
   let ok = 0, fail = 0;
   const saved = [];
   for (const p of checked) {
-    try { const sp = await savePaper(p); saved.push(sp); allUserPapers.push(sp); ok++; }
+    try { const sp = await savePaper(p); saved.push(sp); allUserPapers.push(sp); saveUserPaperToStorage(sp); ok++; }
     catch (_) { fail++; }
   }
   document.getElementById("bulk-status").textContent = `Done: ${ok} added${fail ? `, ${fail} failed` : ""}.`;
@@ -1750,17 +1838,8 @@ document.getElementById("clear-btn").onclick = () => {
 document.querySelectorAll(".filter-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     setFilter(btn.dataset.filter);
-    const allInGraph = [...state.nodes.values()];
-    const filtered = currentFilter === "all" ? allInGraph
-      : allInGraph.filter(p => currentFilter === "user"
-          ? p._source === "user"
-          : (p._source || "seed") === "seed");
-    const src = currentFilter === "seed" ? "seed " : currentFilter === "user" ? "added " : "";
-    const n = filtered.length;
-    const label = n
-      ? `${n} ${src}paper${n !== 1 ? "s" : ""} in graph`
-      : `No ${src}papers in graph`;
-    setResultsList(allInGraph, { showAddAll: true, label, updateBase: false });
+    filterTabActive = true;
+    refreshFilterTabView();
   });
 });
 
@@ -1803,7 +1882,61 @@ document.getElementById("ctx-remove").onclick = () => {
 };
 document.addEventListener("click", e => {
   if (!document.getElementById("node-ctx-menu").contains(e.target)) hideContextMenu();
+  if (!document.getElementById("sidebar-ctx-menu").contains(e.target)) hideSidebarCtxMenu();
 });
+
+// ── Sidebar context menu ──────────────────────────────────────────────────────
+let sidebarCtxPaper = null;
+
+function showSidebarCtxMenu(event, paper) {
+  hideContextMenu();
+  sidebarCtxPaper = paper;
+  const menu = document.getElementById("sidebar-ctx-menu");
+  menu.classList.add("visible");
+  let left = event.clientX + 4, top = event.clientY + 4;
+  const mw = menu.offsetWidth || 180, mh = menu.offsetHeight || 40;
+  if (left + mw > window.innerWidth)  left = event.clientX - mw - 4;
+  if (top  + mh > window.innerHeight) top  = event.clientY - mh - 4;
+  menu.style.left = left + "px";
+  menu.style.top  = top  + "px";
+}
+
+function hideSidebarCtxMenu() {
+  document.getElementById("sidebar-ctx-menu").classList.remove("visible");
+  document.getElementById("sctx-default").style.display = "block";
+  document.getElementById("sctx-confirm-state").style.display = "none";
+  sidebarCtxPaper = null;
+}
+
+async function deletePaperFromDB(paper) {
+  try {
+    const res = await fetch(`/papers/${paper.paperId}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 404) throw new Error(res.statusText);
+    // Remove from graph silently (no undo — permanent delete)
+    if (state.nodes.has(String(paper.paperId))) removeNodes([paper.paperId]);
+    // Remove from user papers storage
+    allUserPapers = allUserPapers.filter(p => String(p.paperId) !== String(paper.paperId));
+    const stored = loadUserPapersFromStorage().filter(p => String(p.paperId) !== String(paper.paperId));
+    localStorage.setItem("user-papers", JSON.stringify(stored));
+    // Animate sidebar item out
+    const el = document.querySelector(`.result-item[data-id="${paper.paperId}"]`);
+    if (el) { el.classList.add("removing"); setTimeout(() => el.remove(), 700); }
+    currentVisible = currentVisible.filter(p => String(p.paperId) !== String(paper.paperId));
+    showToast(`Deleted "${trunc(paper.title, 40)}" from database`);
+    if (filterTabActive) setTimeout(refreshFilterTabView, 750);
+  } catch (e) {
+    showToast("Delete failed: " + e.message);
+  }
+}
+
+document.getElementById("sctx-delete").onclick = () => {
+  document.getElementById("sctx-default").style.display = "none";
+  document.getElementById("sctx-confirm-state").style.display = "block";
+};
+document.getElementById("sctx-confirm").onclick = () => {
+  if (sidebarCtxPaper) { const p = sidebarCtxPaper; hideSidebarCtxMenu(); deletePaperFromDB(p); }
+};
+document.getElementById("sctx-cancel").onclick = () => hideSidebarCtxMenu();
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function showToast(msg, { ms = 3200, undoFn = null } = {}) {
