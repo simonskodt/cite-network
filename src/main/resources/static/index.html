@@ -422,6 +422,17 @@
     }
     #tooltip.visible { opacity: 1; }
 
+    /* ── Removal animation ────────────────────────────────────────────────── */
+    @keyframes fadeSlideOut {
+      0%   { opacity: 1; transform: translateX(0); background: transparent; }
+      15%  { background: rgba(192,57,43,0.12); }
+      100% { opacity: 0; transform: translateX(-14px); }
+    }
+    .result-item.removing {
+      animation: fadeSlideOut 0.55s ease forwards;
+      pointer-events: none;
+    }
+
     /* ── Scrollbars ───────────────────────────────────────────────────────── */
     #results-panel::-webkit-scrollbar,
     #detail-panel::-webkit-scrollbar  { width: 4px; }
@@ -985,6 +996,14 @@ function removeNodes(paperIds) {
   render(); refreshBadges();
 }
 
+function removeNodesAnimated(paperIds) {
+  const ids = new Set(paperIds.map(String));
+  document.querySelectorAll(".result-item").forEach(el => {
+    if (ids.has(el.dataset.id)) el.classList.add("removing");
+  });
+  setTimeout(() => removeNodes(paperIds), 700);
+}
+
 // ── API helpers ───────────────────────────────────────────────────────────────
 function setStatus(msg) { document.getElementById("status-bar").textContent = msg; }
 function updateStatus() {
@@ -1199,14 +1218,14 @@ function refreshBadges() {
   } else if (inGraph.length === currentVisible.length) {
     // All in graph — offer to remove all
     btns.innerHTML = `<button class="sm danger" id="bar-remove-btn">${single ? "Remove from graph" : "Remove all from graph"}</button>`;
-    document.getElementById("bar-remove-btn").onclick = () => removeNodes(inGraph.map(p => p.paperId));
+    document.getElementById("bar-remove-btn").onclick = () => removeNodesAnimated(inGraph.map(p => p.paperId));
   } else {
-    // Mixed — offer both
+    // Mixed — offer both; "Remove remaining" = remove the ones already in graph
     btns.innerHTML = `
       <button class="sm secondary" id="bar-add-btn">Add ${notInGraph.length} to graph</button>
-      <button class="sm danger"    id="bar-remove-btn">Remove ${inGraph.length}</button>`;
+      <button class="sm danger"    id="bar-remove-btn">Remove remaining</button>`;
     document.getElementById("bar-add-btn").onclick    = () => addAllToGraph(notInGraph);
-    document.getElementById("bar-remove-btn").onclick = () => removeNodes(inGraph.map(p => p.paperId));
+    document.getElementById("bar-remove-btn").onclick = () => removeNodesAnimated(inGraph.map(p => p.paperId));
   }
 }
 
