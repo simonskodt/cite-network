@@ -132,6 +132,27 @@ class PaperControllerTest {
     }
 
     @Test
+    void GET_fuzzyTitle_returnsFuzzyMatches() {
+        when(paperService.findPapersByTitleFuzzy("tset"))
+                .thenReturn(Flux.just(paper(1L, "dette er en test")));
+
+        webTestClient.get().uri("/papers/fuzzy-title/tset")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(1);
+    }
+
+    @Test
+    void GET_fuzzyTitle_returnsEmptyWhenNoMatch() {
+        when(paperService.findPapersByTitleFuzzy("xyz")).thenReturn(Flux.empty());
+
+        webTestClient.get().uri("/papers/fuzzy-title/xyz")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(0);
+    }
+
+    @Test
     void POST_papers_createsPaper() {
         Paper newPaper = paper(10L, "New Paper");
         when(paperService.createPaper(any())).thenReturn(Mono.just(newPaper));

@@ -126,6 +126,35 @@ class PaperServiceTest {
     }
 
     @Test
+    void findPapersByTitleFuzzy_findsTypo() {
+        Paper p = paper(1L, "dette er en test");
+        when(paperRepository.findAll()).thenReturn(Flux.just(p));
+
+        StepVerifier.create(paperService.findPapersByTitleFuzzy("tset"))
+                .expectNext(p)
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByTitleFuzzy_returnsEmptyWhenNoMatch() {
+        Paper p = paper(1L, "Graph Theory");
+        when(paperRepository.findAll()).thenReturn(Flux.just(p));
+
+        StepVerifier.create(paperService.findPapersByTitleFuzzy("xyz"))
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByTitleFuzzy_stillFindsExactContains() {
+        Paper p = paper(1L, "dette er en test");
+        when(paperRepository.findAll()).thenReturn(Flux.just(p));
+
+        StepVerifier.create(paperService.findPapersByTitleFuzzy("test"))
+                .expectNext(p)
+                .verifyComplete();
+    }
+
+    @Test
     void addCitation_delegatesToRepository() {
         when(paperRepository.addCitation(1L, 2L)).thenReturn(Mono.empty());
 

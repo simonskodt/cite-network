@@ -1264,14 +1264,21 @@ async function search() {
   };
   try {
     const raw = await apiFetch(urls[type]);
-    const papers = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+    let papers = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+    let approximate = false;
+
+    if (!papers.length && type === "title") {
+      const fuzzyRaw = await apiFetch(`/papers/fuzzy-title/${encodeURIComponent(q)}`);
+      papers = Array.isArray(fuzzyRaw) ? fuzzyRaw : (fuzzyRaw ? [fuzzyRaw] : []);
+      approximate = papers.length > 0;
+    }
+
     if (!papers.length) {
       setResultsList([], { showAddAll: false, label: "No results" });
       updateStatus(); return;
     }
-    // Results appear in sidebar but are NOT added to the graph automatically.
-    // The user chooses which to add by clicking individual items or "Add all".
-    setResultsList(papers, { showAddAll: true });
+    const label = approximate ? `${papers.length} approximate match${papers.length !== 1 ? "es" : ""} for "${trunc(q, 30)}"` : undefined;
+    setResultsList(papers, { showAddAll: true, label });
     updateStatus();
   } catch (e) {
     setStatus("Error: " + e.message);

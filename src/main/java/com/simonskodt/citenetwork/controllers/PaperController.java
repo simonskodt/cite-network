@@ -65,6 +65,11 @@ public class PaperController {
         return paperService.addCitation(citingId, citedId);
     }
 
+    @GetMapping("/fuzzy-title/{query}")
+    public Flux<Paper> findPapersByTitleFuzzy(@PathVariable String query) {
+        return paperService.findPapersByTitleFuzzy(query);
+    }
+
     @DeleteMapping("/{paperId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> deletePaper(@PathVariable Long paperId) {

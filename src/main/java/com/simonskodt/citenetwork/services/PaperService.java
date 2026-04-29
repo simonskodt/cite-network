@@ -55,4 +55,42 @@ public class PaperService {
     public Mono<Void> deletePaper(Long paperId) {
         return paperRepository.deleteById(paperId);
     }
+
+    public Flux<Paper> findPapersByTitleFuzzy(String query) {
+        String q = query.toLowerCase().trim();
+        return paperRepository.findAll()
+                .filter(p -> isFuzzyTitleMatch(p.getTitle(), q));
+    }
+
+    private boolean isFuzzyTitleMatch(String title, String query) {
+        if (title == null) return false;
+        String lower = title.toLowerCase();
+        if (lower.contains(query)) return true;
+        String[] queryWords = query.split("\\s+");
+        String[] titleWords = lower.split("\\s+");
+        for (String qw : queryWords) {
+            if (qw.length() < 3) continue;
+            for (String tw : titleWords) {
+                if (levenshtein(qw, tw) <= editThreshold(qw)) return true;
+            }
+        }
+        return false;
+    }
+
+    private int editThreshold(String word) {
+        return (int) Math.ceil(word.length() / 3.0);
+    }
+
+    private int levenshtein(String a, String b) {
+        int m = a.length(), n = b.length();
+        int[][] dp = new int[m + 1][n + 1];
+        for (int i = 0; i <= m; i++) dp[i][0] = i;
+        for (int j = 0; j <= n; j++) dp[0][j] = j;
+        for (int i = 1; i <= m; i++)
+            for (int j = 1; j <= n; j++)
+                dp[i][j] = a.charAt(i - 1) == b.charAt(j - 1)
+                        ? dp[i - 1][j - 1]
+                        : 1 + Math.min(dp[i - 1][j - 1], Math.min(dp[i - 1][j], dp[i][j - 1]));
+        return dp[m][n];
+    }
 }
