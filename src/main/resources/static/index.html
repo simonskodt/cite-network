@@ -285,6 +285,7 @@
       position: sticky; top: 0; z-index: 2;
     }
     .results-count { font-size: 0.72rem; color: var(--text-muted); flex: 1; }
+    .bar-btns { display: flex; gap: 4px; flex-shrink: 0; }
 
     .result-item {
       display: flex; align-items: center; gap: 8px;
@@ -347,6 +348,8 @@
       border-radius: 12px; padding: 2px 8px;
       font-size: 0.7rem; color: var(--accent-text);
     }
+    .tag-more { cursor: pointer; opacity: 0.65; font-style: italic; }
+    .tag-more:hover { opacity: 1; }
     .detail-actions { display: flex; gap: 5px; flex-wrap: wrap; }
 
     /* ── Sidebar resize handle ───────────────────────────────────────────── */
@@ -613,14 +616,16 @@ const state = {
   links: [],         // {source, target} by paperId
   selected: null,
 };
-let lastResults = [];       // papers from last search / load-sample
-let currentFilter = "all";  // "all" | "seed" | "user"
+let lastResults    = [];       // papers from last search / load-sample
+let currentFilter  = "all";   // "all" | "seed" | "user"
+let pendingBulk    = [];       // parsed papers waiting for user confirmation
+let allUserPapers  = [];       // every paper saved by the user this session
+let currentVisible = [];       // the currently rendered result items (for refreshBadges)
 
 function setFilter(f) {
   currentFilter = f;
   document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b.dataset.filter === f));
 }
-let pendingBulk  = [];      // parsed papers waiting for user confirmation
 
 // ── D3 setup ──────────────────────────────────────────────────────────────────
 const svg    = d3.select("#graph-svg");
@@ -716,6 +721,7 @@ function ticked() {
   linkSel.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
          .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
   nodeSel.attr("transform", d => `translate(${d.x},${d.y})`);
+  if (edgeDraw) draftLine.attr("x1", edgeDraw.src.x).attr("y1", edgeDraw.src.y);
 }
 
 // ── Colour by year ────────────────────────────────────────────────────────────
@@ -739,10 +745,26 @@ function showDetail(d) {
   document.getElementById("dp-year").textContent  = d.publicationYear ? `Published: ${d.publicationYear}` : "";
   const el = document.getElementById("dp-authors");
   el.innerHTML = "";
-  (d.authors || []).filter(a => a?.name?.trim()).forEach(a => {
+  const authors = (d.authors || []).filter(a => a?.name?.trim());
+  const AUTHOR_LIMIT = 5;
+  authors.slice(0, AUTHOR_LIMIT).forEach(a => {
     const s = document.createElement("span"); s.className = "tag"; s.textContent = a.name;
     el.appendChild(s);
   });
+  if (authors.length > AUTHOR_LIMIT) {
+    const rest = authors.slice(AUTHOR_LIMIT);
+    const more = document.createElement("span");
+    more.className = "tag tag-more";
+    more.textContent = `+${rest.length} more`;
+    more.onclick = () => {
+      more.remove();
+      rest.forEach(a => {
+        const s = document.createElement("span"); s.className = "tag"; s.textContent = a.name;
+        el.appendChild(s);
+      });
+    };
+    el.appendChild(more);
+  }
   document.getElementById("detail-panel").classList.add("visible");
   document.getElementById("dp-expand-cited").onclick = () => expandCitedBy(d.paperId);
   document.getElementById("dp-expand-citing").onclick = () => expandCiting(d.paperId);
@@ -788,6 +810,20 @@ function removeNode(paperId) {
     (l.target?.paperId ?? l.target) != paperId
   );
   if (state.selected?.paperId === paperId) {
+    state.selected = null;
+    document.getElementById("detail-panel").classList.remove("visible");
+  }
+  render(); refreshBadges();
+}
+
+function removeNodes(paperIds) {
+  const ids = new Set(paperIds.map(String));
+  ids.forEach(id => state.nodes.delete(id));
+  state.links = state.links.filter(l =>
+    !ids.has(String(l.source?.paperId ?? l.source)) &&
+    !ids.has(String(l.target?.paperId ?? l.target))
+  );
+  if (state.selected && ids.has(String(state.selected.paperId))) {
     state.selected = null;
     document.getElementById("detail-panel").classList.remove("visible");
   }
@@ -901,16 +937,18 @@ async function addAllToGraph(papers) {
 }
 
 // ── Results list ──────────────────────────────────────────────────────────────
-function setResultsList(papers, { showAddAll = true, label } = {}) {
-  lastResults = papers;
+function setResultsList(papers, { showAddAll = true, label, updateBase = true } = {}) {
+  if (updateBase) lastResults = papers;
 
   // Show filter tabs whenever there are results
   const filterRow = document.getElementById("filter-row");
-  filterRow.style.display = papers.length > 0 ? "flex" : "none";
+  filterRow.style.display = (lastResults.length > 0 || allUserPapers.length > 0) ? "flex" : "none";
 
   const panel = document.getElementById("results-panel");
   const visible = currentFilter === "all" ? papers
     : papers.filter(p => (p._source || "seed") === currentFilter);
+
+  currentVisible = visible; // track for refreshBadges
 
   if (!papers.length) {
     panel.innerHTML = `<div class="empty-state">${label || "No results found."}<br>Try a different search term.</div>`;
@@ -925,13 +963,11 @@ function setResultsList(papers, { showAddAll = true, label } = {}) {
   const countLabel = label ?? (currentFilter !== "all"
     ? `${displayCount} of ${papers.length} result${papers.length !== 1 ? "s" : ""}`
     : `${displayCount} result${displayCount !== 1 ? "s" : ""}`);
-  const addAllBtn  = showAddAll
-    ? `<button class="sm secondary" id="add-all-btn">${visible.length === 1 ? "Add to graph" : "Add all to graph"}</button>` : "";
 
   panel.innerHTML = `
-    <div class="results-bar">
+    <div class="results-bar" data-show-add="${showAddAll}">
       <span class="results-count">${esc(countLabel)}</span>
-      ${addAllBtn}
+      <span class="bar-btns"></span>
     </div>` +
     visible.map(p => {
       const inGraph = state.nodes.has(String(p.paperId));
@@ -948,8 +984,6 @@ function setResultsList(papers, { showAddAll = true, label } = {}) {
           </span>
         </div>`;
     }).join("");
-
-  document.getElementById("add-all-btn")?.addEventListener("click", () => addAllToGraph(lastResults));
 
   panel.querySelectorAll(".result-item").forEach(el => {
     // Badge click: add to graph (+ badge) or remove from graph (✓ badge)
@@ -970,25 +1004,53 @@ function setResultsList(papers, { showAddAll = true, label } = {}) {
       if (state.nodes.has(id)) {
         selectNode(state.nodes.get(id));
       } else {
-        const paper = lastResults.find(p => String(p.paperId) === id);
+        const paper = currentVisible.find(p => String(p.paperId) === id)
+          || lastResults.find(p => String(p.paperId) === id);
         if (paper) addPaperAndSelect(paper);
       }
     });
   });
+
+  refreshBadges(); // populate .bar-btns based on current graph state
 }
 
 function refreshBadges() {
   document.querySelectorAll(".result-item").forEach(el => {
-    const inGraph   = state.nodes.has(el.dataset.id);
-    const isSelected = state.selected?.paperId === Number(el.dataset.id);
+    const inGraph = state.nodes.has(el.dataset.id);
     el.classList.toggle("in-graph", inGraph);
     const badge = el.querySelector(".graph-badge");
     if (!badge) return;
-    badge.className = `graph-badge ${inGraph ? "done" : "add"}`;
-    badge.title     = inGraph ? "Remove from graph" : "Add to graph";
+    badge.className   = `graph-badge ${inGraph ? "done" : "add"}`;
+    badge.title       = inGraph ? "Remove from graph" : "Add to graph";
     badge.textContent = inGraph ? "✓" : "+";
-    _ = isSelected; // consumed to avoid lint warning
   });
+
+  // Update the results-bar action buttons
+  const resultsBar = document.querySelector(".results-bar");
+  if (!resultsBar || resultsBar.dataset.showAdd !== "true") return;
+  const btns = resultsBar.querySelector(".bar-btns");
+  if (!btns || !currentVisible.length) return;
+
+  const inGraph    = currentVisible.filter(p =>  state.nodes.has(String(p.paperId)));
+  const notInGraph = currentVisible.filter(p => !state.nodes.has(String(p.paperId)));
+  const single     = currentVisible.length === 1;
+
+  if (notInGraph.length === currentVisible.length) {
+    // None in graph — offer to add all
+    btns.innerHTML = `<button class="sm secondary" id="bar-add-btn">${single ? "Add to graph" : "Add all to graph"}</button>`;
+    document.getElementById("bar-add-btn").onclick = () => addAllToGraph(notInGraph);
+  } else if (inGraph.length === currentVisible.length) {
+    // All in graph — offer to remove all
+    btns.innerHTML = `<button class="sm danger" id="bar-remove-btn">${single ? "Remove from graph" : "Remove all from graph"}</button>`;
+    document.getElementById("bar-remove-btn").onclick = () => removeNodes(inGraph.map(p => p.paperId));
+  } else {
+    // Mixed — offer both
+    btns.innerHTML = `
+      <button class="sm secondary" id="bar-add-btn">Add ${notInGraph.length} to graph</button>
+      <button class="sm danger"    id="bar-remove-btn">Remove ${inGraph.length}</button>`;
+    document.getElementById("bar-add-btn").onclick    = () => addAllToGraph(notInGraph);
+    document.getElementById("bar-remove-btn").onclick = () => removeNodes(inGraph.map(p => p.paperId));
+  }
 }
 
 // ── Expand citations ──────────────────────────────────────────────────────────
@@ -1156,6 +1218,7 @@ document.getElementById("new-paper-form").addEventListener("submit", async e => 
   const authors = raw ? raw.split(",").map(s => s.trim()).filter(Boolean) : [];
   try {
     const paper = await savePaper({ title, publicationYear: year ? parseInt(year) : null, doi, authors });
+    allUserPapers.push(paper);
     document.getElementById("add-paper-form").classList.remove("open");
     document.getElementById("new-paper-form").reset();
     setResultsList([paper], { showAddAll: true, label: "1 new paper" });
@@ -1235,7 +1298,7 @@ document.getElementById("bulk-add-btn").onclick = async () => {
   let ok = 0, fail = 0;
   const saved = [];
   for (const p of checked) {
-    try { saved.push(await savePaper(p)); ok++; }
+    try { const sp = await savePaper(p); saved.push(sp); allUserPapers.push(sp); ok++; }
     catch (_) { fail++; }
   }
   document.getElementById("bulk-status").textContent = `Done: ${ok} added${fail ? `, ${fail} failed` : ""}.`;
@@ -1469,7 +1532,16 @@ document.getElementById("clear-btn").onclick = () => {
 document.querySelectorAll(".filter-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     setFilter(btn.dataset.filter);
-    setResultsList(lastResults, { showAddAll: currentFilter === "all", label: null });
+    if (currentFilter === "user") {
+      const n = allUserPapers.length;
+      setResultsList(allUserPapers, {
+        showAddAll: true,
+        label: n ? `${n} added paper${n !== 1 ? "s" : ""}` : null,
+        updateBase: false,
+      });
+    } else {
+      setResultsList(lastResults, { showAddAll: currentFilter === "all", label: null });
+    }
   });
 });
 
