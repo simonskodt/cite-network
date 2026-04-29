@@ -615,6 +615,11 @@ const state = {
 };
 let lastResults = [];       // papers from last search / load-sample
 let currentFilter = "all";  // "all" | "seed" | "user"
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b.dataset.filter === f));
+}
 let pendingBulk  = [];      // parsed papers waiting for user confirmation
 
 // ── D3 setup ──────────────────────────────────────────────────────────────────
@@ -815,7 +820,7 @@ async function loadCitationsFor(paperId) {
 async function loadSample() {
   const n = Math.max(1, Math.min(20, parseInt(document.getElementById("sample-count").value) || 20));
   document.getElementById("sample-count").value = n;
-  currentFilter = "all";
+  setFilter("all");
   setStatus("Loading…");
   try {
     const papers = await apiFetch(`/papers?limit=${n}`);
@@ -837,7 +842,7 @@ async function search() {
   const q    = document.getElementById("search-input").value.trim();
   if (!q) { document.getElementById("search-input").focus(); return; }
 
-  currentFilter = "all";
+  setFilter("all");
   setStatus("Searching…");
   const urls = {
     title:       `/papers/title/${encodeURIComponent(q)}`,
@@ -1463,8 +1468,7 @@ document.getElementById("clear-btn").onclick = () => {
 // ── Source filter tabs ────────────────────────────────────────────────────────
 document.querySelectorAll(".filter-btn").forEach(btn => {
   btn.addEventListener("click", () => {
-    currentFilter = btn.dataset.filter;
-    document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b === btn));
+    setFilter(btn.dataset.filter);
     setResultsList(lastResults, { showAddAll: currentFilter === "all", label: null });
   });
 });
