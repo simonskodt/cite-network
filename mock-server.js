@@ -72,10 +72,18 @@ const citations = [
   [20, 13], [20, 14],
 ];
 
+// Snapshot of the original seeded papers (never includes user-created ones)
+const SEEDS = papers.slice();
+
 // ── Route helpers ─────────────────────────────────────────────────────────────
 function routeGet(url) {
-  if (url === "/papers")
-    return papers;
+  const base   = url.split("?")[0];
+  const params = new URLSearchParams(url.includes("?") ? url.slice(url.indexOf("?") + 1) : "");
+
+  if (base === "/papers") {
+    const limit = Math.min(parseInt(params.get("limit") || SEEDS.length), SEEDS.length);
+    return SEEDS.slice(0, limit).map(p => ({ ...p, _source: "seed" }));
+  }
 
   const titleM = url.match(/^\/papers\/title\/(.+)$/);
   if (titleM) {
@@ -143,6 +151,17 @@ function respond(res, status, body) {
 const server = http.createServer((req, res) => {
   const url = req.url.split("?")[0];
 
+  // POST /papers/:citingId/cites/:citedId — add a citation edge
+  const citesM = url.match(/^\/papers\/(\d+)\/cites\/(\d+)$/);
+  if (req.method === "POST" && citesM) {
+    const citingId = parseInt(citesM[1]);
+    const citedId  = parseInt(citesM[2]);
+    if (!citations.some(([a, b]) => a === citingId && b === citedId))
+      citations.push([citingId, citedId]);
+    respond(res, 201, { citingId, citedId });
+    return;
+  }
+
   // POST /papers — create a new paper
   if (req.method === "POST" && url === "/papers") {
     let body = "";
@@ -162,7 +181,8 @@ const server = http.createServer((req, res) => {
           authors: (data.authors || []).map((au, i) => ({
             authorId: 1000 + newId * 10 + i,
             name: typeof au === "string" ? au : au.name,
-          })),
+          })).filter(au => au.name?.trim()),
+          _source: "user",
         };
         papers.push(newPaper);
         respond(res, 201, newPaper);
@@ -175,7 +195,7 @@ const server = http.createServer((req, res) => {
 
   // GET API routes
   if (req.method === "GET") {
-    const result = routeGet(url);
+    const result = routeGet(req.url); // pass full URL so query params are available
     if (result !== undefined) {
       respond(res, result === null ? 404 : 200, result);
       return;

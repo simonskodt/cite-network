@@ -81,17 +81,7 @@
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
-    #theme-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border2);
-      color: var(--text);
-      width: 28px; height: 28px;
-      padding: 0; font-size: 0.85rem;
-      border-radius: 6px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s;
-    }
-    #theme-btn:hover { background: var(--border); }
+    /* theme-btn and settings-btn */
 
     /* ── Search area ──────────────────────────────────────────────────────── */
     #search-area {
@@ -101,6 +91,50 @@
       flex-shrink: 0;
     }
     .search-row { display: flex; gap: 5px; align-items: stretch; }
+    #action-row                { flex-wrap: wrap; row-gap: 5px; }
+    #action-row > *            { flex: 1 1 55px; }
+    #load-sample-group         { display: flex; gap: 0; flex: 1.4 1 75px; min-width: 72px; }
+    #load-sample-group button  {
+      flex: 1; min-width: 0;
+      border-radius: 0 6px 6px 0;
+      border-left: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+    }
+    #sample-count {
+      width: 38px; flex: none;
+      padding: 5px 2px 5px 5px;
+      border-radius: 6px 0 0 6px;
+      border-right: none;
+      text-align: center;
+      -moz-appearance: textfield;
+    }
+    #sample-count::-webkit-inner-spin-button { opacity: 0.5; background: transparent; }
+    #search-type { width: 76px; flex-shrink: 0; }
+    input[type="text"] { flex: 1; min-width: 0; }
+    #search-btn {
+      flex-shrink: 0;
+      width: 30px; height: 30px;
+      padding: 5px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--accent-text);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #search-btn:hover { background: var(--border); }
+    #search-btn svg { display: block; }
+
+    /* ── Toast ───────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 52px; left: 50%; transform: translateX(-50%);
+      background: var(--surface); border: 1px solid var(--border2);
+      color: var(--text); padding: 7px 14px; border-radius: 6px;
+      font-size: 0.77rem; z-index: 300; pointer-events: none;
+      opacity: 0; transition: opacity 0.18s;
+      white-space: nowrap; max-width: 88vw; overflow: hidden; text-overflow: ellipsis;
+    }
+    #toast.visible { opacity: 1; }
 
     select, input[type="text"], input[type="number"] {
       background: var(--surface2);
@@ -147,8 +181,8 @@
     button.danger:hover { background: #a93226; }
     button.sm { font-size: 0.72rem; padding: 4px 9px; }
 
-    /* ── Add-paper form ───────────────────────────────────────────────────── */
-    #add-paper-form {
+    /* ── Collapsible panels (add-paper, settings, bulk) ─────────────────── */
+    .cpanel {
       overflow: hidden;
       max-height: 0;
       transition: max-height 0.28s ease, padding 0.28s ease;
@@ -157,13 +191,13 @@
       border-bottom: 0px solid var(--border);
       flex-shrink: 0;
     }
-    #add-paper-form.open {
-      max-height: 300px;
+    .cpanel.open {
+      max-height: 360px;
       padding: 10px 12px;
       border-bottom-width: 1px;
     }
-    #add-paper-form form { display: flex; flex-direction: column; gap: 6px; }
-    #add-paper-form label {
+    .cpanel-inner { display: flex; flex-direction: column; gap: 6px; }
+    .cpanel label {
       font-size: 0.68rem;
       color: var(--text-muted);
       text-transform: uppercase;
@@ -171,6 +205,73 @@
       margin-bottom: 1px;
       display: block;
     }
+    .cpanel-note { font-size: 0.65rem; color: var(--text-muted); line-height: 1.4; }
+    .cpanel input[type="text"],
+    .cpanel input[type="number"],
+    .cpanel input[type="password"] { width: 100%; }
+    textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 7px 9px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      outline: none;
+      resize: vertical;
+      font-family: inherit;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    textarea:focus { border-color: var(--accent-text); }
+
+    /* ── Header icon buttons (settings, theme) ───────────────────────────── */
+    .hdr-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--accent-text);
+      width: 26px; height: 26px;
+      padding: 5px;
+      border-radius: 6px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .hdr-btn:hover { background: var(--border); }
+    .hdr-btn svg { display: block; flex-shrink: 0; }
+
+    /* ── Source filter tabs ──────────────────────────────────────────────── */
+    #filter-row {
+      display: none;
+      gap: 4px; padding: 5px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .filter-btn {
+      font-size: 0.68rem; padding: 2px 9px;
+      background: transparent; color: var(--text-muted);
+      border: 1px solid transparent; border-radius: 10px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .filter-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+    .filter-btn.active { background: var(--surface2); color: var(--accent-text); border-color: var(--border2); font-weight: 600; }
+
+    /* ── Bulk preview list ───────────────────────────────────────────────── */
+    #bulk-preview { display: none; flex-direction: column; gap: 0; margin-top: 4px; }
+    #bulk-preview.visible { display: flex; }
+    .bulk-preview-item {
+      display: flex; align-items: flex-start; gap: 6px;
+      padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.75rem;
+    }
+    .bulk-preview-item:last-child { border-bottom: none; }
+    .bulk-preview-item input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; width: auto; }
+    .bulk-preview-item .bpi-title { flex: 1; min-width: 0; color: var(--text); font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bulk-preview-item .bpi-meta { font-size: 0.68rem; color: var(--text-muted); }
+    .bulk-preview-item.error .bpi-title { color: #e57373; text-decoration: line-through; }
+    .cpanel.open { max-height: 520px; }
+    #bulk-panel.open { max-height: 600px; overflow-y: auto; }
+    #bulk-panel textarea { max-height: 130px; }
+    #bulk-preview.visible { max-height: 180px; overflow-y: auto; }
 
     /* ── Results panel ────────────────────────────────────────────────────── */
     #results-panel { flex: 1; overflow-y: auto; }
@@ -209,7 +310,8 @@
       width: 20px; height: 20px;
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem; font-weight: 700;
+      font-size: 0.7rem; font-weight: 700; line-height: 1;
+      user-select: none;
       transition: background 0.15s;
     }
     .graph-badge.add  { background: var(--accent); color: #fff; }
@@ -248,6 +350,18 @@
     }
     .detail-actions { display: flex; gap: 5px; flex-wrap: wrap; }
 
+    /* ── Sidebar resize handle ───────────────────────────────────────────── */
+    #sidebar-resize {
+      width: 5px;
+      flex-shrink: 0;
+      cursor: col-resize;
+      background: var(--border);
+      transition: background 0.15s;
+      z-index: 10;
+    }
+    #sidebar-resize:hover,
+    #sidebar-resize.dragging { background: var(--accent); }
+
     /* ── Graph canvas ─────────────────────────────────────────────────────── */
     #graph-area {
       flex: 1; position: relative;
@@ -260,6 +374,10 @@
     #arrow path { fill: var(--link-color); }
     .node circle { stroke: var(--node-lstroke); stroke-width: 1.5px; cursor: pointer; }
     .node.selected circle { stroke-width: 3px; stroke: var(--accent-text); }
+    .node.edge-src circle { stroke: var(--accent-text) !important; stroke-width: 3px !important; }
+    .node.edge-target circle { stroke: #4ade80 !important; stroke-width: 3px !important; }
+    .draft-edge { stroke: var(--accent-text); stroke-dasharray: 6 4; stroke-width: 2; fill: none; pointer-events: none; opacity: 0.8; }
+    #graph-svg.edge-drawing { cursor: crosshair; }
     .node text {
       font-size: 10px;
       fill: var(--node-label);
@@ -316,7 +434,39 @@
 
   <div id="sidebar-header">
     <h1>Citation Network</h1>
-    <button id="theme-btn" title="Toggle light / dark mode">☀</button>
+    <div style="display:flex;gap:5px">
+      <button id="settings-btn" class="hdr-btn" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button id="theme-btn" class="hdr-btn" title="Toggle light / dark mode">☀</button>
+    </div>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="settings-panel" class="cpanel">
+    <div class="cpanel-inner">
+      <div>
+        <label>AI Provider</label>
+        <select id="ai-provider">
+          <option value="">Disabled</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+        </select>
+      </div>
+      <div>
+        <label>API Key</label>
+        <input type="password" id="ai-key" placeholder="Paste your key…" />
+      </div>
+      <div>
+        <label>Model <span style="font-size:0.6rem;text-transform:none">(leave blank for default)</span></label>
+        <input type="text" id="ai-model" placeholder="gpt-4o-mini / claude-haiku-4-5-20251001" />
+      </div>
+      <div class="search-row">
+        <button id="settings-save" style="flex:1">Save</button>
+        <button class="secondary" id="settings-cancel">Cancel</button>
+      </div>
+      <p class="cpanel-note">Keys are stored in your browser only and never sent to this server.</p>
+    </div>
   </div>
 
   <div id="search-area">
@@ -328,18 +478,40 @@
         <option value="institution">Institution</option>
       </select>
       <input type="text" id="search-input" placeholder="Search…" autocomplete="off" />
-      <button id="search-btn">Search</button>
+      <button id="search-btn" title="Search">
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
     </div>
-    <div class="search-row">
-      <button class="secondary" id="load-sample-btn" style="flex:1">Load sample (20)</button>
+    <div class="search-row" id="action-row">
+      <div id="load-sample-group">
+        <input type="number" id="sample-count" value="20" min="1" max="20" title="Number of papers to load" />
+        <button class="secondary" id="load-sample-btn">Load</button>
+      </div>
+      <button class="secondary" id="bulk-btn">Bulk</button>
       <button class="secondary" id="new-paper-btn">+ New</button>
       <button class="secondary" id="clear-btn">Clear</button>
     </div>
   </div>
 
+  <!-- Source filter tabs -->
+  <div id="filter-row">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="seed">Seed</button>
+    <button class="filter-btn" data-filter="user">Added</button>
+  </div>
+
   <!-- Collapsible add-paper form -->
-  <div id="add-paper-form">
-    <form id="new-paper-form" autocomplete="off">
+  <div id="add-paper-form" class="cpanel">
+    <form id="new-paper-form" class="cpanel-inner" autocomplete="off">
+      <!-- AI parse row — shown only when AI is configured -->
+      <div id="np-ai-row" style="display:none">
+        <label>Paste any text — AI will extract the details</label>
+        <textarea id="np-ai-text" rows="3" placeholder="Paste a citation, abstract, or any description of the paper. AI will fill in the fields below for you."></textarea>
+        <button type="button" class="sm" id="np-ai-btn" style="margin-top:4px;width:100%">Extract with AI →</button>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-top:3px">Or fill the fields manually below</div>
+      </div>
       <div>
         <label>Title *</label>
         <input type="text" id="np-title" placeholder="Paper title" required />
@@ -365,6 +537,32 @@
     </form>
   </div>
 
+  <!-- Bulk import panel -->
+  <div id="bulk-panel" class="cpanel">
+    <div class="cpanel-inner">
+      <div>
+        <label>Paste DOIs — one per line</label>
+        <textarea id="bulk-doi-input" rows="3" placeholder="10.1145/3442188.3445922&#10;10.1038/s41586-021-03819-2"></textarea>
+        <button type="button" class="secondary sm" id="bulk-doi-btn" style="margin-top:4px;width:100%">Fetch by DOI (CrossRef)</button>
+      </div>
+      <div id="bulk-ai-section">
+        <label>Or paste free-text references (AI)</label>
+        <textarea id="bulk-ai-input" rows="3" placeholder="Paste bibliography, abstracts, or a list of papers…"></textarea>
+        <button type="button" class="sm" id="bulk-ai-btn" style="margin-top:4px;width:100%">Parse with AI</button>
+      </div>
+      <div id="bulk-status" class="cpanel-note"></div>
+
+      <!-- Preview step: shown after fetch/parse, before committing -->
+      <div id="bulk-preview"></div>
+      <div id="bulk-confirm-row" style="display:none; flex-direction:column; gap:5px; margin-top:4px">
+        <button type="button" id="bulk-add-btn" style="width:100%">Add to system</button>
+        <button type="button" class="secondary sm" id="bulk-discard-btn" style="width:100%">Discard & start over</button>
+      </div>
+
+      <button type="button" class="secondary sm" id="bulk-cancel" style="align-self:flex-end;margin-top:2px">Close</button>
+    </div>
+  </div>
+
   <div id="results-panel">
     <div class="empty-state">Search for papers above, or press <strong>Load sample</strong> to explore the citation network.</div>
   </div>
@@ -377,10 +575,14 @@
     <div class="detail-actions">
       <button class="sm" id="dp-expand-cited">Cited by this</button>
       <button class="sm" id="dp-expand-citing">Citing this</button>
+      <button class="sm secondary" id="dp-find-online" style="display:none">Find online</button>
       <button class="sm danger" id="dp-remove">Remove</button>
     </div>
   </div>
 </div>
+
+<!-- ── Resize handle ─────────────────────────────────────────────────────── -->
+<div id="sidebar-resize"></div>
 
 <!-- ── Graph canvas ──────────────────────────────────────────────────────── -->
 <div id="graph-area">
@@ -412,7 +614,9 @@ const state = {
   links: [],         // {source, target} by paperId
   selected: null,
 };
-let lastResults = [];  // papers from last search / load-sample
+let lastResults = [];       // papers from last search / load-sample
+let currentFilter = "all";  // "all" | "seed" | "user"
+let pendingBulk  = [];      // parsed papers waiting for user confirmation
 
 // ── D3 setup ──────────────────────────────────────────────────────────────────
 const svg    = d3.select("#graph-svg");
@@ -433,6 +637,22 @@ const sim = d3.forceSimulation()
 
 let linkSel = root.append("g").attr("class", "links").selectAll(".link");
 let nodeSel = root.append("g").attr("class", "nodes").selectAll(".node");
+
+// Draft edge line for hold-to-draw citation (rendered above links, below nodes)
+const draftLine = root.select("g.links").append("line")
+  .attr("class", "draft-edge")
+  .style("display", "none")
+  .attr("marker-end", "url(#arrow)");
+
+// Edge-draw state
+let edgeDraw   = null;   // null | { src: nodeData }
+let holdTimer  = null;
+let holdStartX = 0, holdStartY = 0;
+let holdMoved  = false;
+
+function onHoldMove(e) {
+  if (Math.abs(e.clientX - holdStartX) + Math.abs(e.clientY - holdStartY) > 8) holdMoved = true;
+}
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function render() {
@@ -460,8 +680,15 @@ function render() {
             .on("drag",  dragged)
             .on("end",   dragended))
           .on("click",     (_, d) => selectNode(d))
-          .on("mouseover", (e, d) => showTip(e, d))
-          .on("mouseout",  () => hideTip());
+          .on("mouseover", (e, d) => {
+            showTip(e, d);
+            if (edgeDraw && d.paperId !== edgeDraw.src.paperId)
+              d3.select(e.currentTarget).classed("edge-target", true);
+          })
+          .on("mouseout",  (e) => {
+            hideTip();
+            d3.select(e.currentTarget).classed("edge-target", false);
+          });
         g.append("circle").attr("r", 18).attr("fill", d => colorFor(d));
         g.append("text").attr("dy", "0.35em").attr("text-anchor", "middle")
           .attr("y", 28).text(d => trunc(d.title, 22));
@@ -508,7 +735,7 @@ function showDetail(d) {
   document.getElementById("dp-year").textContent  = d.publicationYear ? `Published: ${d.publicationYear}` : "";
   const el = document.getElementById("dp-authors");
   el.innerHTML = "";
-  (d.authors || []).forEach(a => {
+  (d.authors || []).filter(a => a?.name?.trim()).forEach(a => {
     const s = document.createElement("span"); s.className = "tag"; s.textContent = a.name;
     el.appendChild(s);
   });
@@ -516,6 +743,20 @@ function showDetail(d) {
   document.getElementById("dp-expand-cited").onclick = () => expandCitedBy(d.paperId);
   document.getElementById("dp-expand-citing").onclick = () => expandCiting(d.paperId);
   document.getElementById("dp-remove").onclick = () => removeNode(d.paperId);
+  const findBtn = document.getElementById("dp-find-online");
+  if (d.doi) {
+    findBtn.style.display = "";
+    findBtn.onclick = () => {
+      const url = `https://doi.org/${d.doi}`;
+      const opened = window.open(url, "_blank", "noopener");
+      if (!opened) {
+        navigator.clipboard.writeText(url).catch(() => {});
+        showToast(`Copied: ${url}`);
+      }
+    };
+  } else {
+    findBtn.style.display = "none";
+  }
 }
 
 // ── Graph manipulation ────────────────────────────────────────────────────────
@@ -573,9 +814,12 @@ async function loadCitationsFor(paperId) {
 
 // ── Load sample ───────────────────────────────────────────────────────────────
 async function loadSample() {
+  const n = Math.max(1, Math.min(20, parseInt(document.getElementById("sample-count").value) || 20));
+  document.getElementById("sample-count").value = n;
+  currentFilter = "all";
   setStatus("Loading…");
   try {
-    const papers = await apiFetch("/papers");
+    const papers = await apiFetch(`/papers?limit=${n}`);
     papers.forEach(p => addNodeToGraph(p));
     render();
     setResultsList(papers, { showAddAll: false, label: `${papers.length} papers in sample` });
@@ -594,6 +838,7 @@ async function search() {
   const q    = document.getElementById("search-input").value.trim();
   if (!q) { document.getElementById("search-input").focus(); return; }
 
+  currentFilter = "all";
   setStatus("Searching…");
   const urls = {
     title:       `/papers/title/${encodeURIComponent(q)}`,
@@ -654,22 +899,37 @@ async function addAllToGraph(papers) {
 // ── Results list ──────────────────────────────────────────────────────────────
 function setResultsList(papers, { showAddAll = true, label } = {}) {
   lastResults = papers;
+
+  // Show filter tabs whenever there are results
+  const filterRow = document.getElementById("filter-row");
+  filterRow.style.display = papers.length > 0 ? "flex" : "none";
+
   const panel = document.getElementById("results-panel");
+  const visible = currentFilter === "all" ? papers
+    : papers.filter(p => (p._source || "seed") === currentFilter);
+
   if (!papers.length) {
     panel.innerHTML = `<div class="empty-state">${label || "No results found."}<br>Try a different search term.</div>`;
     return;
   }
+  if (!visible.length) {
+    panel.innerHTML = `<div class="empty-state">No ${currentFilter === "user" ? "manually added" : "seed"} papers in this set.</div>`;
+    return;
+  }
 
-  const countLabel = label ?? `${papers.length} result${papers.length !== 1 ? "s" : ""}`;
+  const displayCount = visible.length;
+  const countLabel = label ?? (currentFilter !== "all"
+    ? `${displayCount} of ${papers.length} result${papers.length !== 1 ? "s" : ""}`
+    : `${displayCount} result${displayCount !== 1 ? "s" : ""}`);
   const addAllBtn  = showAddAll
-    ? `<button class="sm secondary" id="add-all-btn">Add all to graph</button>` : "";
+    ? `<button class="sm secondary" id="add-all-btn">${visible.length === 1 ? "Add to graph" : "Add all to graph"}</button>` : "";
 
   panel.innerHTML = `
     <div class="results-bar">
       <span class="results-count">${esc(countLabel)}</span>
       ${addAllBtn}
     </div>` +
-    papers.map(p => {
+    visible.map(p => {
       const inGraph = state.nodes.has(String(p.paperId));
       const authorStr = (p.authors || []).map(a => a.name).join(", ");
       return `
@@ -679,7 +939,7 @@ function setResultsList(papers, { showAddAll = true, label } = {}) {
             <div class="rmeta">${p.publicationYear || "—"}${authorStr ? " · " + esc(authorStr) : ""}</div>
           </div>
           <span class="graph-badge ${inGraph ? "done" : "add"}"
-                title="${inGraph ? "In graph — click to select" : "Click to add to graph"}">
+                title="${inGraph ? "Remove from graph" : "Add to graph"}">
             ${inGraph ? "✓" : "+"}
           </span>
         </div>`;
@@ -688,6 +948,19 @@ function setResultsList(papers, { showAddAll = true, label } = {}) {
   document.getElementById("add-all-btn")?.addEventListener("click", () => addAllToGraph(lastResults));
 
   panel.querySelectorAll(".result-item").forEach(el => {
+    // Badge click: add to graph (+ badge) or remove from graph (✓ badge)
+    el.querySelector(".graph-badge").addEventListener("click", e => {
+      e.stopPropagation();
+      const id = el.dataset.id;
+      if (state.nodes.has(id)) {
+        removeNode(Number(id));
+      } else {
+        const paper = lastResults.find(p => String(p.paperId) === id);
+        if (paper) addPaperAndSelect(paper);
+      }
+    });
+
+    // Row body click: select if in graph, add if not
     el.addEventListener("click", () => {
       const id = el.dataset.id;
       if (state.nodes.has(id)) {
@@ -708,7 +981,7 @@ function refreshBadges() {
     const badge = el.querySelector(".graph-badge");
     if (!badge) return;
     badge.className = `graph-badge ${inGraph ? "done" : "add"}`;
-    badge.title     = inGraph ? "In graph — click to select" : "Click to add to graph";
+    badge.title     = inGraph ? "Remove from graph" : "Add to graph";
     badge.textContent = inGraph ? "✓" : "+";
     _ = isSelected; // consumed to avoid lint warning
   });
@@ -735,28 +1008,150 @@ async function expandCiting(paperId) {
   } catch (e) { setStatus("Error: " + e.message); }
 }
 
+// ── AI config helpers ─────────────────────────────────────────────────────────
+function getAIConfig() {
+  return {
+    provider: localStorage.getItem("ai-provider") || "",
+    key:      localStorage.getItem("ai-key")      || "",
+    model:    localStorage.getItem("ai-model")    || "",
+  };
+}
+function isAIConfigured() { const c = getAIConfig(); return !!(c.provider && c.key); }
+
+// ── AI parse ──────────────────────────────────────────────────────────────────
+async function parseWithAI(text) {
+  const cfg = getAIConfig();
+  if (!isAIConfigured()) throw new Error("AI not configured — open Settings first.");
+  const system = `Extract academic paper information from the text. Return ONLY a JSON array where each element has: title (string), publicationYear (number or null), doi (string or null), authors (array of name strings). Example: [{"title":"X","publicationYear":2023,"doi":"10.1/x","authors":["Alice Smith"]}]`;
+  let raw;
+  if (cfg.provider === "openai") {
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.key}` },
+      body: JSON.stringify({ model: cfg.model || "gpt-4o-mini", temperature: 0,
+        messages: [{ role: "system", content: system }, { role: "user", content: text }] }),
+    });
+    if (!r.ok) throw new Error(`OpenAI ${r.status}`);
+    raw = (await r.json()).choices[0].message.content;
+  } else if (cfg.provider === "anthropic") {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": cfg.key,
+        "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({ model: cfg.model || "claude-haiku-4-5-20251001", max_tokens: 2048,
+        system, messages: [{ role: "user", content: text }] }),
+    });
+    if (!r.ok) throw new Error(`Anthropic ${r.status}`);
+    raw = (await r.json()).content[0].text;
+  }
+  const m = raw.match(/\[[\s\S]*]/);
+  if (!m) throw new Error("AI returned no JSON array");
+  return JSON.parse(m[0]);
+}
+
+// ── DOI lookup via CrossRef ───────────────────────────────────────────────────
+async function fetchByDOI(doi) {
+  doi = doi.trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, "");
+  const r = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`);
+  if (!r.ok) throw new Error(`DOI not found: ${doi}`);
+  const m = (await r.json()).message;
+  return {
+    title:           Array.isArray(m.title) ? m.title[0] : (m.title || doi),
+    publicationYear: m.published?.["date-parts"]?.[0]?.[0] || null,
+    doi:             m.DOI || doi,
+    authors:         (m.author || []).map(a => [a.given, a.family].filter(Boolean).join(" ")),
+  };
+}
+
+// ── Post a paper to backend, return saved paper ───────────────────────────────
+async function savePaper(p) {
+  return fetch("/papers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title:           p.title,
+      publicationYear: p.publicationYear || null,
+      doi:             p.doi || null,
+      authors:         (p.authors || []).map(a => typeof a === "string" ? { name: a } : a),
+    }),
+  }).then(r => { if (!r.ok) throw new Error(r.statusText); return r.json(); });
+}
+
+// ── Settings panel ────────────────────────────────────────────────────────────
+function openSettings() {
+  closeAllPanels();
+  const cfg = getAIConfig();
+  document.getElementById("ai-provider").value = cfg.provider;
+  document.getElementById("ai-key").value      = cfg.key;
+  document.getElementById("ai-model").value    = cfg.model;
+  document.getElementById("settings-panel").classList.add("open");
+}
+document.getElementById("settings-btn").onclick = () => {
+  document.getElementById("settings-panel").classList.contains("open")
+    ? closeAllPanels() : openSettings();
+};
+document.getElementById("settings-save").onclick = () => {
+  localStorage.setItem("ai-provider", document.getElementById("ai-provider").value);
+  localStorage.setItem("ai-key",      document.getElementById("ai-key").value.trim());
+  localStorage.setItem("ai-model",    document.getElementById("ai-model").value.trim());
+  closeAllPanels();
+  refreshAIVisibility();
+};
+document.getElementById("settings-cancel").onclick = closeAllPanels;
+
+function refreshAIVisibility() {
+  const on = isAIConfigured();
+  document.getElementById("np-ai-row").style.display    = on ? "" : "none";
+  document.getElementById("bulk-ai-section").style.display = on ? "" : "none";
+}
+
 // ── New paper form ────────────────────────────────────────────────────────────
+function closeAllPanels() {
+  ["settings-panel", "add-paper-form", "bulk-panel"].forEach(id =>
+    document.getElementById(id).classList.remove("open"));
+}
+
 document.getElementById("new-paper-btn").onclick = () => {
-  document.getElementById("add-paper-form").classList.toggle("open");
+  const isOpen = document.getElementById("add-paper-form").classList.contains("open");
+  closeAllPanels();
+  if (!isOpen) document.getElementById("add-paper-form").classList.add("open");
 };
 document.getElementById("np-cancel").onclick = () => {
   document.getElementById("add-paper-form").classList.remove("open");
   document.getElementById("new-paper-form").reset();
 };
+
+// AI parse button inside new-paper form
+document.getElementById("np-ai-btn").onclick = async () => {
+  const text = document.getElementById("np-ai-text").value.trim();
+  if (!text) return;
+  const btn = document.getElementById("np-ai-btn");
+  btn.textContent = "Parsing…"; btn.disabled = true;
+  try {
+    const papers = await parseWithAI(text);
+    if (papers.length) {
+      const p = papers[0];
+      document.getElementById("np-title").value   = p.title || "";
+      document.getElementById("np-year").value    = p.publicationYear || "";
+      document.getElementById("np-doi").value     = p.doi || "";
+      document.getElementById("np-authors").value = (p.authors || []).join(", ");
+    }
+    btn.textContent = "Parsed ✓";
+  } catch (e) {
+    btn.textContent = "Parse with AI";
+    setStatus("AI error: " + e.message);
+  } finally { btn.disabled = false; }
+};
+
 document.getElementById("new-paper-form").addEventListener("submit", async e => {
   e.preventDefault();
-  const title  = document.getElementById("np-title").value.trim();
-  const year   = document.getElementById("np-year").value;
-  const doi    = document.getElementById("np-doi").value.trim();
-  const raw    = document.getElementById("np-authors").value.trim();
-  const authors = raw ? raw.split(",").map(s => ({ name: s.trim() })).filter(a => a.name) : [];
+  const title   = document.getElementById("np-title").value.trim();
+  const year    = document.getElementById("np-year").value;
+  const doi     = document.getElementById("np-doi").value.trim();
+  const raw     = document.getElementById("np-authors").value.trim();
+  const authors = raw ? raw.split(",").map(s => s.trim()).filter(Boolean) : [];
   try {
-    const paper = await fetch("/papers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, publicationYear: year ? parseInt(year) : null, doi: doi || null, authors }),
-    }).then(r => { if (!r.ok) throw new Error(r.statusText); return r.json(); });
-
+    const paper = await savePaper({ title, publicationYear: year ? parseInt(year) : null, doi, authors });
     document.getElementById("add-paper-form").classList.remove("open");
     document.getElementById("new-paper-form").reset();
     setResultsList([paper], { showAddAll: true, label: "1 new paper" });
@@ -764,16 +1159,175 @@ document.getElementById("new-paper-form").addEventListener("submit", async e => 
   } catch (err) { setStatus("Save failed: " + err.message); }
 });
 
+// ── Bulk import panel ─────────────────────────────────────────────────────────
+document.getElementById("bulk-btn").onclick = () => {
+  const isOpen = document.getElementById("bulk-panel").classList.contains("open");
+  closeAllPanels();
+  if (!isOpen) document.getElementById("bulk-panel").classList.add("open");
+};
+document.getElementById("bulk-cancel").onclick = () => { resetBulkPreview(); closeAllPanels(); };
+
+// ── Bulk preview step ─────────────────────────────────────────────────────────
+function updateBulkAddBtn() {
+  const n = document.querySelectorAll("#bulk-preview input[type=checkbox]:checked").length;
+  const btn = document.getElementById("bulk-add-btn");
+  btn.textContent = `Add ${n} paper${n !== 1 ? "s" : ""} to system`;
+  btn.disabled = n === 0;
+}
+
+function showBulkPreview(results) {
+  // results = [{paper, ok: true} | {doi/text, ok: false, error}]
+  pendingBulk = results;
+  const previewEl  = document.getElementById("bulk-preview");
+  const confirmRow = document.getElementById("bulk-confirm-row");
+  const statusEl   = document.getElementById("bulk-status");
+
+  const good = results.filter(r => r.ok);
+  const bad  = results.filter(r => !r.ok);
+  statusEl.textContent = `${good.length} ready to add${bad.length ? `, ${bad.length} failed` : ""}.`;
+
+  previewEl.innerHTML = "";
+  previewEl.classList.add("visible");
+
+  results.forEach((r, i) => {
+    const div = document.createElement("div");
+    div.className = "bulk-preview-item" + (r.ok ? "" : " error");
+    if (r.ok) {
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.checked = true; cb.dataset.idx = i;
+      cb.addEventListener("change", updateBulkAddBtn);
+      const info = document.createElement("div");
+      info.style.flex = "1";
+      info.innerHTML = `<div class="bpi-title">${esc(r.paper.title)}</div>
+        <div class="bpi-meta">${r.paper.publicationYear || "—"}${r.paper.doi ? " · " + esc(r.paper.doi) : ""}</div>`;
+      div.append(cb, info);
+    } else {
+      div.innerHTML = `<div class="bpi-title">${esc(r.label || "Unknown")}</div>
+        <div class="bpi-meta" style="color:#e57373">${esc(r.error)}</div>`;
+    }
+    previewEl.appendChild(div);
+  });
+
+  if (good.length) {
+    confirmRow.style.display = "flex";
+    updateBulkAddBtn();
+  }
+}
+
+function resetBulkPreview() {
+  pendingBulk = [];
+  document.getElementById("bulk-preview").innerHTML = "";
+  document.getElementById("bulk-preview").classList.remove("visible");
+  document.getElementById("bulk-confirm-row").style.display = "none";
+  document.getElementById("bulk-status").textContent = "";
+}
+
+document.getElementById("bulk-add-btn").onclick = async () => {
+  const checked = [...document.querySelectorAll("#bulk-preview input[type=checkbox]:checked")]
+    .map(cb => pendingBulk[parseInt(cb.dataset.idx)]?.paper).filter(Boolean);
+  if (!checked.length) return;
+  const btn = document.getElementById("bulk-add-btn");
+  btn.textContent = "Saving…"; btn.disabled = true;
+  let ok = 0, fail = 0;
+  const saved = [];
+  for (const p of checked) {
+    try { saved.push(await savePaper(p)); ok++; }
+    catch (_) { fail++; }
+  }
+  document.getElementById("bulk-status").textContent = `Done: ${ok} added${fail ? `, ${fail} failed` : ""}.`;
+  resetBulkPreview();
+  if (saved.length) {
+    setResultsList(saved, { showAddAll: true, label: `${saved.length} imported paper${saved.length !== 1 ? "s" : ""}` });
+    setStatus(`Imported ${ok} paper${ok !== 1 ? "s" : ""}.`);
+  }
+  btn.textContent = "Add to system"; btn.disabled = false;
+};
+
+document.getElementById("bulk-discard-btn").onclick = () => {
+  resetBulkPreview();
+  document.getElementById("bulk-doi-input").value = "";
+  document.getElementById("bulk-ai-input").value  = "";
+};
+
+document.getElementById("bulk-doi-btn").onclick = async () => {
+  const lines = document.getElementById("bulk-doi-input").value
+    .split("\n").map(s => s.trim()).filter(Boolean);
+  if (!lines.length) return;
+  const btn = document.getElementById("bulk-doi-btn");
+  btn.textContent = "Fetching…"; btn.disabled = true;
+  resetBulkPreview();
+  try {
+    const settled = await Promise.allSettled(lines.map(fetchByDOI));
+    const results = settled.map((r, i) => r.status === "fulfilled"
+      ? { ok: true,  paper: r.value }
+      : { ok: false, label: lines[i], error: r.reason?.message || "Not found" });
+    showBulkPreview(results);
+  } catch (e) {
+    document.getElementById("bulk-status").textContent = "Error: " + e.message;
+  } finally { btn.textContent = "Fetch by DOI (CrossRef)"; btn.disabled = false; }
+};
+
+document.getElementById("bulk-ai-btn").onclick = async () => {
+  const text = document.getElementById("bulk-ai-input").value.trim();
+  if (!text) return;
+  const btn = document.getElementById("bulk-ai-btn");
+  btn.textContent = "Parsing…"; btn.disabled = true;
+  resetBulkPreview();
+  try {
+    const papers = await parseWithAI(text);
+    if (!papers.length) { document.getElementById("bulk-status").textContent = "AI found no papers."; return; }
+    showBulkPreview(papers.map(p => ({ ok: true, paper: p })));
+  } catch (e) {
+    document.getElementById("bulk-status").textContent = "Error: " + e.message;
+  } finally { btn.textContent = "Parse with AI"; btn.disabled = false; }
+};
+
 // ── Theme toggle ──────────────────────────────────────────────────────────────
+const SVG_SUN = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+const SVG_MOON = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+
 function applyTheme(t) {
   document.documentElement.setAttribute("data-theme", t);
-  document.getElementById("theme-btn").textContent = t === "dark" ? "☀" : "🌙";
+  document.getElementById("theme-btn").innerHTML = t === "dark" ? SVG_SUN : SVG_MOON;
   localStorage.setItem("theme", t);
 }
 document.getElementById("theme-btn").onclick = () => {
   applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
 };
 applyTheme(localStorage.getItem("theme") || "dark");
+
+// ── Sidebar resize ────────────────────────────────────────────────────────────
+(function () {
+  const handle  = document.getElementById("sidebar-resize");
+  const sidebar = document.getElementById("sidebar");
+  let dragging = false, startX = 0, startW = 0;
+
+  handle.addEventListener("mousedown", e => {
+    dragging = true;
+    startX   = e.clientX;
+    startW   = sidebar.getBoundingClientRect().width;
+    handle.classList.add("dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    const w = Math.min(Math.max(startW + (e.clientX - startX), 220), 620);
+    sidebar.style.width    = w + "px";
+    sidebar.style.minWidth = w + "px";
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove("dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    centreSimulation();
+  });
+})();
 
 // ── Zoom & fit ────────────────────────────────────────────────────────────────
 document.getElementById("zoom-in-btn").onclick  = () => svg.transition().call(zoom.scaleBy, 1.4);
@@ -794,10 +1348,71 @@ function fitGraph() {
       .scale(s));
 }
 
-// ── Drag ──────────────────────────────────────────────────────────────────────
-function dragstarted(e, d) { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
-function dragged(e, d)     { d.fx = e.x; d.fy = e.y; }
-function dragended(e, d)   { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }
+// ── Drag (with hold-to-draw-citation) ─────────────────────────────────────────
+function dragstarted(e, d) {
+  holdMoved = false;
+  holdStartX = e.sourceEvent.clientX;
+  holdStartY = e.sourceEvent.clientY;
+  window.addEventListener("pointermove", onHoldMove);
+
+  holdTimer = setTimeout(() => {
+    if (!holdMoved) {
+      edgeDraw = { src: d };
+      svg.classed("edge-drawing", true);
+      nodeSel.classed("edge-src", nd => nd.paperId === d.paperId);
+      draftLine.attr("x1", d.x).attr("y1", d.y).attr("x2", d.x).attr("y2", d.y)
+               .style("display", null);
+      d.fx = null; d.fy = null;
+    }
+  }, 400);
+
+  if (!e.active) sim.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+
+function dragged(e, d) {
+  if (edgeDraw) {
+    draftLine.attr("x2", e.x).attr("y2", e.y);
+  } else {
+    d.fx = e.x; d.fy = e.y;
+  }
+}
+
+function dragended(e, d) {
+  clearTimeout(holdTimer);
+  window.removeEventListener("pointermove", onHoldMove);
+  if (!e.active) sim.alphaTarget(0);
+
+  if (edgeDraw) {
+    const srcPaperId = edgeDraw.src.paperId;
+    const target = findNodeUnderCursor(e.sourceEvent);
+    edgeDraw = null;
+    draftLine.style("display", "none");
+    svg.classed("edge-drawing", false);
+    nodeSel.classed("edge-src", false).classed("edge-target", false);
+    d.fx = null; d.fy = null;
+    if (target && target.paperId !== srcPaperId) createCitation(srcPaperId, target.paperId);
+  } else {
+    d.fx = null; d.fy = null;
+  }
+}
+
+function findNodeUnderCursor(event) {
+  const el = document.elementFromPoint(event.clientX, event.clientY);
+  const g = el?.closest(".node");
+  return g ? d3.select(g).datum() : null;
+}
+
+async function createCitation(citingId, citedId) {
+  try {
+    await fetch(`/papers/${citingId}/cites/${citedId}`, { method: "POST" });
+    pushLink(citingId, citedId);
+    render();
+    showToast("Citation link added");
+  } catch (_) {
+    showToast("Failed to save citation");
+  }
+}
 
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 function showTip(event, d) {
@@ -828,6 +1443,15 @@ centreSimulation();
 // ── Wire up remaining controls ────────────────────────────────────────────────
 document.getElementById("search-btn").onclick = search;
 document.getElementById("search-input").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && edgeDraw) {
+    edgeDraw = null;
+    clearTimeout(holdTimer);
+    draftLine.style("display", "none");
+    svg.classed("edge-drawing", false);
+    nodeSel.classed("edge-src", false).classed("edge-target", false);
+  }
+});
 document.getElementById("load-sample-btn").onclick = loadSample;
 document.getElementById("clear-btn").onclick = () => {
   state.nodes.clear(); state.links.length = 0; state.selected = null;
@@ -836,6 +1460,28 @@ document.getElementById("clear-btn").onclick = () => {
     '<div class="empty-state">Graph cleared. Search or load a sample to continue.</div>';
   render();
 };
+
+// ── Source filter tabs ────────────────────────────────────────────────────────
+document.querySelectorAll(".filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentFilter = btn.dataset.filter;
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b === btn));
+    setResultsList(lastResults, { showAddAll: currentFilter === "all", label: null });
+  });
+});
+
+// Initialise AI-gated UI
+refreshAIVisibility();
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, ms = 3200) {
+  let el = document.getElementById("toast");
+  if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
+  el.textContent = msg;
+  el.classList.add("visible");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("visible"), ms);
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function trunc(s, n) { return s && s.length > n ? s.slice(0, n) + "…" : (s || ""); }
