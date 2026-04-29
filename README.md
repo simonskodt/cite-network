@@ -26,12 +26,18 @@ An interactive graph-based explorer showing how academic papers cite each other.
 |---|---|
 | Force-directed graph | D3.js v7 simulation with directional citation arrows, colour-coded by decade |
 | Search | By title (partial match), author, publication year, or institution |
-| Selective graph building | Search results appear in the sidebar only — click a result to add it to the graph, or press **Add all to graph** |
+| Selective graph building | Search results appear in the sidebar only — click a result to add it to the graph, or press **Add to graph** / **Add all to graph** |
+| Source filter tabs | Filter sidebar results by **All**, **Seed**, or **Added** (user-created) papers |
 | Expand on demand | **Cited by this** / **Citing this** buttons load connected papers around the selected node |
-| Add new paper | Press **+ New** to create a paper (title, year, DOI, authors); it is persisted in Neo4j |
-| Light / dark mode | Toggle with ☀/🌙 — preference saved in `localStorage` |
+| Draw citation edges | Hold a node for ~400 ms, then drag to another node to create a citation link |
+| Add new paper | Press **+ New** to create a paper (title, year, DOI, authors); optionally paste free text and let AI extract details |
+| Bulk import | Open **Bulk** to fetch papers by DOI via CrossRef, or paste free-text references for AI parsing; preview and confirm before committing |
+| Find online | Click **Find online** in the detail panel to open the DOI URL in a new tab |
+| AI integration | Configure an OpenAI or Anthropic key in **Settings** to enable AI-powered text parsing |
+| Light / dark mode | Toggle with the sun/moon button — preference saved in `localStorage` |
 | Node detail panel | Click any node to see its DOI, year, authors, and expand/remove actions |
 | Zoom & pan | Mouse scroll, +/− buttons, or ⊡ to fit the full graph |
+| Configurable sample size | Set how many seed papers to load (1–20) next to the **Load** button |
 
 ---
 
@@ -44,7 +50,7 @@ An interactive graph-based explorer showing how academic papers cite each other.
 | Frontend | Vanilla JS + D3.js v7, served as a static classpath resource |
 | Dev server | `mock-server.js` — Node.js mock with 20 papers, no Neo4j needed |
 | Tests | JUnit 5, Mockito, `@WebFluxTest`, `@DataNeo4jTest` + embedded neo4j-harness |
-| CI | GitHub Actions — `mvn verify` (compile → test → package in one pass) |
+| CI | GitHub Actions — compile → test → package, with JUnit XML report upload |
 
 ---
 
@@ -74,7 +80,7 @@ An interactive graph-based explorer showing how academic papers cite each other.
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/papers` | First 20 papers |
+| `GET` | `/papers?limit={n}` | First *n* papers (default 20) |
 | `GET` | `/papers/title/{title}` | Paper whose title contains the query |
 | `GET` | `/papers/author/{name}` | Papers by author name |
 | `GET` | `/papers/year/{year}` | Papers by publication year |
@@ -150,10 +156,12 @@ mvn verify
 GitHub Actions runs on every push and every PR targeting `main`:
 
 ```
-Checkout → Set up JDK 23 → mvn verify → Upload JAR artifact (14-day retention)
+Checkout → Set up JDK 23 → Compile → Test → Upload surefire reports (7 days)
+         → Package → Upload JAR artifact (14 days) → Test summary
 ```
 
 The embedded Neo4j harness means CI needs no database service container.
+Test results are uploaded as surefire XML artifacts and rendered as a job summary via `test-summary/action@v2`.
 
 ---
 

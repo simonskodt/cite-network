@@ -21,13 +21,25 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # Runs compile → test → package → verify in one pass.
-      # Unit tests use Mockito; integration tests use the embedded Neo4j harness
-      # (neo4j-harness) so no external database is required.
+      - name: Compile
+        run: mvn -B compile
+
+      # Unit tests (Mockito) + integration tests (embedded Neo4j harness) in one pass.
       # ByteBuddy experimental mode for Java 23+ is set via maven-surefire-plugin
-      # argLine in pom.xml.
-      - name: Build, test and package
-        run: mvn -B verify
+      # argLine in pom.xml. No external database is required.
+      - name: Test
+        run: mvn -B test
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          retention-days: 7
+
+      - name: Package
+        run: mvn -B package -DskipTests
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
@@ -35,3 +47,9 @@ jobs:
           name: cite-network-jar
           path: target/cite-network-*.jar
           retention-days: 14
+
+      - name: Test summary
+        uses: test-summary/action@v2
+        if: always()
+        with:
+          paths: target/surefire-reports/TEST-*.xml
