@@ -441,22 +441,25 @@
     #help-modal {
       background: var(--surface); border: 1px solid var(--border2);
       border-radius: 10px; padding: 20px 24px;
-      max-width: 460px; width: 92%; max-height: 80vh; overflow-y: auto;
+      max-width: 500px; width: 92%; max-height: 80vh; overflow-y: auto;
       position: relative;
     }
-    #help-modal h2 { font-size: 0.9rem; color: var(--accent-text); margin-bottom: 12px; }
-    #help-modal h3 {
-      font-size: 0.68rem; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.05em; margin: 14px 0 5px;
+    #help-modal h2 { font-size: 0.9rem; color: var(--accent-text); margin-bottom: 14px; }
+    .help-table { width: 100%; border-collapse: collapse; }
+    .help-table td { padding: 5px 0; vertical-align: top; font-size: 0.78rem; color: var(--text); line-height: 1.5; }
+    .help-table td:first-child { padding-right: 16px; width: 1%; white-space: nowrap; }
+    .help-section-row td {
+      font-size: 0.63rem; color: var(--text-muted); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      padding: 16px 0 6px; border-bottom: 1px solid var(--border);
     }
-    .help-row { display: flex; gap: 9px; margin-bottom: 6px; align-items: flex-start; }
-    .help-key {
+    .help-section-row:first-child td { padding-top: 0; }
+    .hk {
+      display: inline-block;
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 4px; padding: 1px 7px;
-      font-size: 0.68rem; color: var(--accent-text);
-      white-space: nowrap; flex-shrink: 0; line-height: 1.7;
+      border-radius: 4px; padding: 1px 8px;
+      font-size: 0.68rem; color: var(--accent-text); white-space: nowrap; line-height: 1.8;
     }
-    .help-desc { font-size: 0.78rem; color: var(--text); line-height: 1.5; }
     #help-close {
       position: absolute; top: 10px; right: 12px;
       background: none; border: none; color: var(--text-muted);
@@ -674,24 +677,28 @@
   <div id="help-modal">
     <button id="help-close">✕</button>
     <h2>How to use the Citation Network</h2>
-    <h3>Navigating</h3>
-    <div class="help-row"><span class="help-key">Scroll</span><span class="help-desc">Zoom in / out</span></div>
-    <div class="help-row"><span class="help-key">Drag background</span><span class="help-desc">Pan the graph</span></div>
-    <div class="help-row"><span class="help-key">Click node</span><span class="help-desc">Select — see title, DOI, authors, and actions in the panel below</span></div>
-    <div class="help-row"><span class="help-key">Right-click node</span><span class="help-desc">Context menu: expand citations or remove the node</span></div>
-    <h3>Adding papers</h3>
-    <div class="help-row"><span class="help-key">Load</span><span class="help-desc">Load N seed papers into the graph; set the number to the left</span></div>
-    <div class="help-row"><span class="help-key">Search bar</span><span class="help-desc">Find papers by title, author, year, or institution; results appear in the sidebar — click to add individually</span></div>
-    <div class="help-row"><span class="help-key">+ New</span><span class="help-desc">Create a new paper (or paste text for AI extraction)</span></div>
-    <div class="help-row"><span class="help-key">Bulk</span><span class="help-desc">Import multiple papers by DOI (CrossRef) or free-text via AI</span></div>
-    <h3>Drawing citation arrows</h3>
-    <div class="help-row"><span class="help-key">Hold node ~400 ms</span><span class="help-desc">Enter drag mode — drag the dashed arrow to the target node</span></div>
-    <div class="help-row"><span class="help-key">Double-click node</span><span class="help-desc">Enter persistent draw mode — then click any other node to connect</span></div>
-    <div class="help-row"><span class="help-key">Esc</span><span class="help-desc">Cancel drawing at any time</span></div>
-    <h3>Exploring connections</h3>
-    <div class="help-row"><span class="help-key">Cited by this</span><span class="help-desc">Expand outward — load papers this node cites</span></div>
-    <div class="help-row"><span class="help-key">Citing this</span><span class="help-desc">Expand inward — load papers that cite this node</span></div>
-    <div class="help-row"><span class="help-key">Filter tabs</span><span class="help-desc">Switch the sidebar between All / Seed / Added papers</span></div>
+    <table class="help-table">
+      <tbody>
+        <tr class="help-section-row"><td colspan="2">Navigating</td></tr>
+        <tr><td><span class="hk">Scroll</span></td><td>Zoom in / out</td></tr>
+        <tr><td><span class="hk">Drag background</span></td><td>Pan the graph</td></tr>
+        <tr><td><span class="hk">Click node</span></td><td>Select — see title, DOI, authors, and actions in the panel below</td></tr>
+        <tr><td><span class="hk">Right-click node</span></td><td>Context menu: expand citations or remove the node</td></tr>
+        <tr class="help-section-row"><td colspan="2">Adding papers</td></tr>
+        <tr><td><span class="hk">Load</span></td><td>Load N seed papers into the graph; set the count with the number input</td></tr>
+        <tr><td><span class="hk">Search bar</span></td><td>Find by title, author, year, or institution — results appear in the sidebar; click to add</td></tr>
+        <tr><td><span class="hk">+ New</span></td><td>Create a new paper manually, or paste text for AI extraction</td></tr>
+        <tr><td><span class="hk">Bulk</span></td><td>Import multiple papers by DOI via CrossRef, or free-text via AI</td></tr>
+        <tr class="help-section-row"><td colspan="2">Drawing citation arrows</td></tr>
+        <tr><td><span class="hk">Hold ~400 ms</span></td><td>Enter drag mode — drag the dashed arrow to a target node</td></tr>
+        <tr><td><span class="hk">Double-click node</span></td><td>Enter persistent draw mode — then click any other node to connect</td></tr>
+        <tr><td><span class="hk">Esc</span></td><td>Cancel drawing at any time</td></tr>
+        <tr class="help-section-row"><td colspan="2">Exploring connections</td></tr>
+        <tr><td><span class="hk">Cited by this</span></td><td>Expand outward — load papers this node cites</td></tr>
+        <tr><td><span class="hk">Citing this</span></td><td>Expand inward — load papers that cite this node</td></tr>
+        <tr><td><span class="hk">All / Seed / Added</span></td><td>Filter tabs — show papers in the graph filtered by source</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
@@ -894,7 +901,7 @@ function showDetail(d) {
   document.getElementById("detail-panel").classList.add("visible");
   document.getElementById("dp-expand-cited").onclick = () => expandCitedBy(d.paperId);
   document.getElementById("dp-expand-citing").onclick = () => expandCiting(d.paperId);
-  document.getElementById("dp-remove").onclick = () => removeNode(d.paperId);
+  document.getElementById("dp-remove").onclick = () => removeNodeWithUndo(d);
   const findBtn = document.getElementById("dp-find-online");
   if (d.doi) {
     findBtn.style.display = "";
@@ -940,6 +947,28 @@ function removeNode(paperId) {
     document.getElementById("detail-panel").classList.remove("visible");
   }
   render(); refreshBadges();
+}
+
+function removeNodeWithUndo(paper) {
+  const savedLinks = state.links
+    .filter(l =>
+      (l.source?.paperId ?? l.source) == paper.paperId ||
+      (l.target?.paperId ?? l.target) == paper.paperId
+    )
+    .map(l => ({
+      source: l.source?.paperId ?? l.source,
+      target: l.target?.paperId ?? l.target,
+    }));
+  removeNode(paper.paperId);
+  showToast(`Removed "${trunc(paper.title, 40)}"`, {
+    ms: 5500,
+    undoFn: () => {
+      addNodeToGraph(paper);
+      savedLinks.forEach(l => pushLink(l.source, l.target));
+      render(); refreshBadges();
+      showToast(`Restored "${trunc(paper.title, 40)}"`);
+    },
+  });
 }
 
 function removeNodes(paperIds) {
@@ -1067,9 +1096,9 @@ async function addAllToGraph(papers) {
 function setResultsList(papers, { showAddAll = true, label, updateBase = true } = {}) {
   if (updateBase) lastResults = papers;
 
-  // Show filter tabs whenever any papers have ever been loaded
+  // Show filter tabs whenever there are papers in the graph
   const filterRow = document.getElementById("filter-row");
-  filterRow.style.display = (lastResults.length > 0 || allSeedPapers.length > 0 || allUserPapers.length > 0) ? "flex" : "none";
+  filterRow.style.display = state.nodes.size > 0 ? "flex" : "none";
 
   const panel = document.getElementById("results-panel");
   const visible = currentFilter === "all" ? papers
@@ -1113,14 +1142,15 @@ function setResultsList(papers, { showAddAll = true, label, updateBase = true } 
     }).join("");
 
   panel.querySelectorAll(".result-item").forEach(el => {
-    // Badge click: add to graph (+ badge) or remove from graph (✓ badge)
+    // Badge click: add to graph (+ badge) or remove from graph with undo (✓ badge)
     el.querySelector(".graph-badge").addEventListener("click", e => {
       e.stopPropagation();
       const id = el.dataset.id;
       if (state.nodes.has(id)) {
-        removeNode(Number(id));
+        removeNodeWithUndo(state.nodes.get(id));
       } else {
-        const paper = lastResults.find(p => String(p.paperId) === id);
+        const paper = lastResults.find(p => String(p.paperId) === id)
+          || currentVisible.find(p => String(p.paperId) === id);
         if (paper) addPaperAndSelect(paper);
       }
     });
@@ -1668,33 +1698,17 @@ document.getElementById("clear-btn").onclick = () => {
 document.querySelectorAll(".filter-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     setFilter(btn.dataset.filter);
-    if (currentFilter === "user") {
-      const n = allUserPapers.length;
-      setResultsList(allUserPapers, {
-        showAddAll: true,
-        label: n ? `${n} added paper${n !== 1 ? "s" : ""}` : null,
-        updateBase: false,
-      });
-    } else if (currentFilter === "seed") {
-      const n = allSeedPapers.length;
-      setResultsList(allSeedPapers, {
-        showAddAll: true,
-        label: n ? `${n} seed paper${n !== 1 ? "s" : ""}` : null,
-        updateBase: false,
-      });
-    } else {
-      // "all" — show the union of every paper loaded this session
-      const all = dedupeById([...allSeedPapers, ...allUserPapers]);
-      if (all.length) {
-        setResultsList(all, {
-          showAddAll: true,
-          label: `${all.length} paper${all.length !== 1 ? "s" : ""}`,
-          updateBase: false,
-        });
-      } else {
-        setResultsList(lastResults, { showAddAll: true, label: null });
-      }
-    }
+    const allInGraph = [...state.nodes.values()];
+    const filtered = currentFilter === "all" ? allInGraph
+      : allInGraph.filter(p => currentFilter === "user"
+          ? p._source === "user"
+          : (p._source || "seed") === "seed");
+    const src = currentFilter === "seed" ? "seed " : currentFilter === "user" ? "added " : "";
+    const n = filtered.length;
+    const label = n
+      ? `${n} ${src}paper${n !== 1 ? "s" : ""} in graph`
+      : `No ${src}papers in graph`;
+    setResultsList(allInGraph, { showAddAll: true, label, updateBase: false });
   });
 });
 
@@ -1740,17 +1754,25 @@ document.getElementById("ctx-citing").onclick = () => {
   if (ctxTarget) { expandCiting(ctxTarget.paperId); hideContextMenu(); }
 };
 document.getElementById("ctx-remove").onclick = () => {
-  if (ctxTarget) { removeNode(ctxTarget.paperId); hideContextMenu(); }
+  if (ctxTarget) { const t = ctxTarget; hideContextMenu(); removeNodeWithUndo(t); }
 };
 document.addEventListener("click", e => {
   if (!document.getElementById("node-ctx-menu").contains(e.target)) hideContextMenu();
 });
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
-function showToast(msg, ms = 3200) {
+function showToast(msg, { ms = 3200, undoFn = null } = {}) {
   let el = document.getElementById("toast");
   if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
-  el.textContent = msg;
+  el.innerHTML = "";
+  el.appendChild(document.createTextNode(msg));
+  if (undoFn) {
+    const btn = document.createElement("button");
+    btn.textContent = "Undo";
+    btn.style.cssText = "margin-left:10px;padding:1px 8px;font-size:0.72rem;background:var(--surface2);border:1px solid var(--border2);color:var(--accent-text);border-radius:4px;cursor:pointer;vertical-align:middle";
+    btn.onclick = () => { clearTimeout(el._t); el.classList.remove("visible"); undoFn(); };
+    el.appendChild(btn);
+  }
   el.classList.add("visible");
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove("visible"), ms);
