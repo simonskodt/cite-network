@@ -866,6 +866,27 @@ function ticked() {
          .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
   nodeSel.attr("transform", d => `translate(${d.x},${d.y})`);
   if (edgeDraw) draftLine.attr("x1", edgeDraw.src.x).attr("y1", edgeDraw.src.y);
+  if (ctxTarget) repositionContextMenu();
+}
+
+function repositionContextMenu() {
+  const menu = document.getElementById("node-ctx-menu");
+  if (!menu.classList.contains("visible")) return;
+  const t = d3.zoomTransform(svg.node());
+  const rect = svg.node().getBoundingClientRect();
+  // Convert simulation coords → screen coords
+  const [sx, sy] = t.apply([ctxTarget.x, ctxTarget.y]);
+  const screenX = rect.left + sx;
+  const screenY = rect.top  + sy;
+  // Anchor menu to right of node centre, nudged down slightly
+  let left = screenX + 22;
+  let top  = screenY - 10;
+  const mw = menu.offsetWidth  || 160;
+  const mh = menu.offsetHeight || 100;
+  if (left + mw > window.innerWidth)  left = screenX - mw - 22;
+  if (top  + mh > window.innerHeight) top  = screenY - mh + 10;
+  menu.style.left = left + "px";
+  menu.style.top  = top  + "px";
 }
 
 // ── Colour by year ────────────────────────────────────────────────────────────
@@ -970,14 +991,26 @@ function removeNodeWithUndo(paper) {
       source: l.source?.paperId ?? l.source,
       target: l.target?.paperId ?? l.target,
     }));
+
+  // Animate sidebar item out before removing from graph (refreshBadges skips .removing)
+  const itemEl = document.querySelector(`.result-item[data-id="${paper.paperId}"]`);
+  if (itemEl) {
+    itemEl.classList.add("removing");
+    setTimeout(() => { if (itemEl.parentNode) itemEl.remove(); }, 700);
+  }
+
   removeNode(paper.paperId);
+
   showToast(`Removed "${trunc(paper.title, 40)}"`, {
     ms: 5500,
     undoFn: () => {
       addNodeToGraph(paper);
       savedLinks.forEach(l => pushLink(l.source, l.target));
-      render(); refreshBadges();
-      showToast(`Restored "${trunc(paper.title, 40)}"`);
+      render();
+      // Re-insert the paper into the visible list and re-render
+      const base = lastResults.length ? lastResults : [...state.nodes.values()];
+      if (!base.some(p => String(p.paperId) === String(paper.paperId))) base.unshift(paper);
+      setResultsList(base, { showAddAll: !!lastResults.length, updateBase: false });
     },
   });
 }
@@ -1191,7 +1224,7 @@ function setResultsList(papers, { showAddAll = true, label, updateBase = true } 
 }
 
 function refreshBadges() {
-  document.querySelectorAll(".result-item").forEach(el => {
+  document.querySelectorAll(".result-item:not(.removing)").forEach(el => {
     const inGraph = state.nodes.has(el.dataset.id);
     el.classList.toggle("in-graph", inGraph);
     const badge = el.querySelector(".graph-badge");
@@ -1750,15 +1783,8 @@ let ctxTarget = null;
 function showContextMenu(event, d) {
   ctxTarget = d;
   selectNode(d);
-  const menu = document.getElementById("node-ctx-menu");
-  menu.style.left = event.clientX + "px";
-  menu.style.top  = event.clientY + "px";
-  menu.classList.add("visible");
-  requestAnimationFrame(() => {
-    const r = menu.getBoundingClientRect();
-    if (r.right  > window.innerWidth)  menu.style.left = (event.clientX - r.width)  + "px";
-    if (r.bottom > window.innerHeight) menu.style.top  = (event.clientY - r.height) + "px";
-  });
+  document.getElementById("node-ctx-menu").classList.add("visible");
+  repositionContextMenu();
 }
 
 function hideContextMenu() {
