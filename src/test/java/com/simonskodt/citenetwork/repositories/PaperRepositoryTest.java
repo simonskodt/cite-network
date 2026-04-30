@@ -208,7 +208,7 @@ class PaperRepositoryTest {
         savePaper(1L, "Deletable", 2020, "doi/1");
 
         StepVerifier.create(paperRepository.deleteById(1L)
-                .then(paperRepository.findPaperByTitle("Deletable")))
+                .thenMany(paperRepository.findPapersByTitle("Deletable")))
                 .verifyComplete();
     }
 
@@ -225,11 +225,11 @@ class PaperRepositoryTest {
                 .verifyComplete();
 
         // Citing paper is gone
-        StepVerifier.create(paperRepository.findPaperByTitle("Citing"))
+        StepVerifier.create(paperRepository.findPapersByTitle("Citing"))
                 .verifyComplete();
 
         // Cited paper still exists — only the citing node was deleted
-        StepVerifier.create(paperRepository.findPaperByTitle("Cited"))
+        StepVerifier.create(paperRepository.findPapersByTitle("Cited"))
                 .assertNext(p -> Assertions.assertEquals("Cited", p.getTitle()))
                 .verifyComplete();
 

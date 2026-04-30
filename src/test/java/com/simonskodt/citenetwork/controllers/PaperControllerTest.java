@@ -120,11 +120,11 @@ class PaperControllerTest {
     }
 
     @Test
-    void GET_papers_withLimitParam_returnsResults() {
+    void GET_papers_returnsFirstTenPapers() {
         when(paperService.findFirstTenPapers()).thenReturn(
                 Flux.just(paper(1L, "A"), paper(2L, "B"), paper(3L, "C")));
 
-        webTestClient.get().uri("/papers?limit=3")
+        webTestClient.get().uri("/papers")
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
                 .expectStatus().isOk()
