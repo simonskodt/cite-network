@@ -1708,7 +1708,15 @@ document.getElementById("bulk-add-btn").onclick = async () => {
   let ok = 0, fail = 0;
   const saved = [];
   for (const p of checked) {
-    try { const sp = await savePaper(p); saved.push(sp); allUserPapers.push(sp); saveUserPaperToStorage(sp); ok++; }
+    try {
+      const sp = await savePaper(p);
+      saved.push(sp);
+      if (!allUserPapers.some(existing => existing.paperId === sp.paperId)) {
+        allUserPapers.push(sp);
+      }
+      saveUserPaperToStorage(sp);
+      ok++;
+    }
     catch (_) { fail++; }
   }
   document.getElementById("bulk-status").textContent = `Done: ${ok} added${fail ? `, ${fail} failed` : ""}.`;
