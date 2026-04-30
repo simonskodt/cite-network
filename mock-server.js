@@ -90,6 +90,7 @@ function levenshtein(a, b) {
 }
 
 function fuzzyTitleMatch(title, query) {
+  if (!query || !query.trim()) return false;
   const q = query.toLowerCase().trim();
   if (!q) return false;
   const t = title.toLowerCase();
