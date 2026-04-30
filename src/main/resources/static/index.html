@@ -821,11 +821,6 @@ function cancelEdgeDraw() {
   nodeSel.classed("edge-src", false).classed("edge-target", false);
 }
 
-function dedupeById(papers) {
-  const seen = new Set();
-  return papers.filter(p => { const id = String(p.paperId); if (seen.has(id)) return false; seen.add(id); return true; });
-}
-
 // ── Render ────────────────────────────────────────────────────────────────────
 function render() {
   const nodes = [...state.nodes.values()];
