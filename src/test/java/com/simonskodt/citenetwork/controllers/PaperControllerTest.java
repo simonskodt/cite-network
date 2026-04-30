@@ -38,23 +38,24 @@ class PaperControllerTest {
     }
 
     @Test
-    void GET_paperByTitle_returnsPaper() {
-        when(paperService.findPaperByTitle("Graph Theory")).thenReturn(Mono.just(paper(1L, "Graph Theory")));
+    void GET_papersByTitle_returnsMatchingPapers() {
+        when(paperService.findPapersByTitle("graph")).thenReturn(
+                Flux.just(paper(1L, "Graph Theory"), paper(2L, "Graph Databases")));
 
-        webTestClient.get().uri("/papers/title/Graph Theory")
+        webTestClient.get().uri("/papers/title/graph")
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(Paper.class)
-                .value(p -> org.junit.jupiter.api.Assertions.assertEquals("Graph Theory", p.getTitle()));
+                .expectBodyList(Paper.class).hasSize(2);
     }
 
     @Test
-    void GET_paperByTitle_returns404WhenNotFound() {
-        when(paperService.findPaperByTitle("Missing")).thenReturn(Mono.empty());
+    void GET_papersByTitle_returnsEmptyListWhenNotFound() {
+        when(paperService.findPapersByTitle("missing")).thenReturn(Flux.empty());
 
-        webTestClient.get().uri("/papers/title/Missing")
+        webTestClient.get().uri("/papers/title/missing")
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(0);
     }
 
     @Test
@@ -85,6 +86,70 @@ class PaperControllerTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(Paper.class).hasSize(1);
+    }
+
+    @Test
+    void GET_papersByAuthor_returnsPapers() {
+        when(paperService.findPapersByAuthorName("Alice")).thenReturn(Flux.just(paper(1L, "Alice's Paper")));
+
+        webTestClient.get().uri("/papers/author/Alice")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class)
+                .value(list -> org.junit.jupiter.api.Assertions.assertEquals("Alice's Paper", list.get(0).getTitle()));
+    }
+
+    @Test
+    void GET_papersByAuthor_returnsEmptyListWhenNoneFound() {
+        when(paperService.findPapersByAuthorName("Unknown")).thenReturn(Flux.empty());
+
+        webTestClient.get().uri("/papers/author/Unknown")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(0);
+    }
+
+    @Test
+    void GET_papersByInstitution_returnsPapers() {
+        when(paperService.findPapersByInstitutionName("MIT")).thenReturn(Flux.just(paper(3L, "MIT Paper")));
+
+        webTestClient.get().uri("/papers/institution/MIT")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(1);
+    }
+
+    @Test
+    void GET_papers_returnsFirstTenPapers() {
+        when(paperService.findFirstTenPapers()).thenReturn(
+                Flux.just(paper(1L, "A"), paper(2L, "B"), paper(3L, "C")));
+
+        webTestClient.get().uri("/papers")
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(3);
+    }
+
+    @Test
+    void GET_fuzzyTitle_returnsFuzzyMatches() {
+        when(paperService.findPapersByTitleFuzzy("tset"))
+                .thenReturn(Flux.just(paper(1L, "dette er en test")));
+
+        webTestClient.get().uri("/papers/fuzzy-title/tset")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(1);
+    }
+
+    @Test
+    void GET_fuzzyTitle_returnsEmptyWhenNoMatch() {
+        when(paperService.findPapersByTitleFuzzy("xyz")).thenReturn(Flux.empty());
+
+        webTestClient.get().uri("/papers/fuzzy-title/xyz")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(Paper.class).hasSize(0);
     }
 
     @Test

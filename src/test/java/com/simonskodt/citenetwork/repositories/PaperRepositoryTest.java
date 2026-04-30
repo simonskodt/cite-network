@@ -75,10 +75,10 @@ class PaperRepositoryTest {
     }
 
     @Test
-    void findPaperByTitle_returnsMatchingPaper() {
+    void findPapersByTitle_returnsExactMatch() {
         savePaper(1L, "Graph Theory Basics", 2021, "doi/1");
 
-        StepVerifier.create(paperRepository.findPaperByTitle("Graph Theory Basics"))
+        StepVerifier.create(paperRepository.findPapersByTitle("Graph Theory Basics"))
                 .assertNext(p -> {
                     Assertions.assertEquals("Graph Theory Basics", p.getTitle());
                     Assertions.assertEquals(2021, p.getPublicationYear());
@@ -87,8 +87,28 @@ class PaperRepositoryTest {
     }
 
     @Test
-    void findPaperByTitle_returnsEmptyForUnknown() {
-        StepVerifier.create(paperRepository.findPaperByTitle("Nonexistent"))
+    void findPapersByTitle_returnsPartialMatch() {
+        savePaper(1L, "dette er en test", 2024, "doi/1");
+        savePaper(2L, "another test paper", 2023, "doi/2");
+        savePaper(3L, "unrelated work", 2022, "doi/3");
+
+        StepVerifier.create(paperRepository.findPapersByTitle("test"))
+                .expectNextCount(2)
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByTitle_isCaseInsensitive() {
+        savePaper(1L, "Graph Theory Basics", 2021, "doi/1");
+
+        StepVerifier.create(paperRepository.findPapersByTitle("GRAPH THEORY"))
+                .expectNextCount(1)
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByTitle_returnsEmptyForUnknown() {
+        StepVerifier.create(paperRepository.findPapersByTitle("Nonexistent"))
                 .verifyComplete();
     }
 
@@ -188,7 +208,33 @@ class PaperRepositoryTest {
         savePaper(1L, "Deletable", 2020, "doi/1");
 
         StepVerifier.create(paperRepository.deleteById(1L)
-                .then(paperRepository.findPaperByTitle("Deletable")))
+                .thenMany(paperRepository.findPapersByTitle("Deletable")))
+                .verifyComplete();
+    }
+
+    @Test
+    void deleteById_detachesCitationRelationships() {
+        savePaper(1L, "Citing", 2021, "doi/1");
+        savePaper(2L, "Cited",  2020, "doi/2");
+
+        try (var session = driver.session()) {
+            session.run("MATCH (a:Paper {paperId: 1}), (b:Paper {paperId: 2}) CREATE (a)-[:CITES]->(b)");
+        }
+
+        StepVerifier.create(paperRepository.deleteById(1L))
+                .verifyComplete();
+
+        // Citing paper is gone
+        StepVerifier.create(paperRepository.findPapersByTitle("Citing"))
+                .verifyComplete();
+
+        // Cited paper still exists — only the citing node was deleted
+        StepVerifier.create(paperRepository.findPapersByTitle("Cited"))
+                .assertNext(p -> Assertions.assertEquals("Cited", p.getTitle()))
+                .verifyComplete();
+
+        // No paper is citing "Cited" anymore — relationship was detached
+        StepVerifier.create(paperRepository.findPapersCitingPaper(2L))
                 .verifyComplete();
     }
 }

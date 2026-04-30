@@ -75,6 +75,36 @@ const citations = [
 // Snapshot of the original seeded papers (never includes user-created ones)
 const SEEDS = papers.slice();
 
+// ── Fuzzy helpers ─────────────────────────────────────────────────────────────
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => j === 0 ? i : 0));
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
+  return dp[m][n];
+}
+
+function fuzzyTitleMatch(title, query) {
+  if (!query || !query.trim()) return false;
+  const q = query.toLowerCase().trim();
+  if (!q) return false;
+  const t = title.toLowerCase();
+  if (t.includes(q)) return true;
+  const qWords = q.split(/\s+/).filter(w => w.length >= 3);
+  const tWords = t.split(/\s+/);
+  return qWords.some(qw =>
+    tWords.some(tw => {
+      const thresh = Math.ceil(qw.length / 3);
+      return levenshtein(qw, tw) <= thresh;
+    })
+  );
+}
+
 // ── Route helpers ─────────────────────────────────────────────────────────────
 function routeGet(url) {
   const base   = url.split("?")[0];
@@ -85,10 +115,16 @@ function routeGet(url) {
     return SEEDS.slice(0, limit).map(p => ({ ...p, _source: "seed" }));
   }
 
+  const fuzzyM = url.match(/^\/papers\/fuzzy-title\/(.+)$/);
+  if (fuzzyM) {
+    const q = decodeURIComponent(fuzzyM[1]);
+    return papers.filter(p => fuzzyTitleMatch(p.title, q));
+  }
+
   const titleM = url.match(/^\/papers\/title\/(.+)$/);
   if (titleM) {
     const q = decodeURIComponent(titleM[1]).toLowerCase();
-    return papers.find(p => p.title.toLowerCase().includes(q)) || null;
+    return papers.filter(p => p.title.toLowerCase().includes(q));
   }
 
   const citedByM = url.match(/^\/papers\/(\d+)\/cited-by$/);

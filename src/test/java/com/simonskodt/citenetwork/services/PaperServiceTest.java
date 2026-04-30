@@ -38,20 +38,21 @@ class PaperServiceTest {
     }
 
     @Test
-    void findPaperByTitle_returnsPaper() {
-        Paper p = paper(1L, "Neo4j Paper");
-        when(paperRepository.findPaperByTitle("Neo4j Paper")).thenReturn(Mono.just(p));
+    void findPapersByTitle_returnsMatchingPapers() {
+        Paper p1 = paper(1L, "Neo4j Paper");
+        Paper p2 = paper(2L, "Neo4j at Scale");
+        when(paperRepository.findPapersByTitle("neo4j")).thenReturn(Flux.just(p1, p2));
 
-        StepVerifier.create(paperService.findPaperByTitle("Neo4j Paper"))
-                .expectNext(p)
+        StepVerifier.create(paperService.findPapersByTitle("neo4j"))
+                .expectNext(p1, p2)
                 .verifyComplete();
     }
 
     @Test
-    void findPaperByTitle_returnsEmptyWhenNotFound() {
-        when(paperRepository.findPaperByTitle("Missing")).thenReturn(Mono.empty());
+    void findPapersByTitle_returnsEmptyWhenNotFound() {
+        when(paperRepository.findPapersByTitle("missing")).thenReturn(Flux.empty());
 
-        StepVerifier.create(paperService.findPaperByTitle("Missing"))
+        StepVerifier.create(paperService.findPapersByTitle("missing"))
                 .verifyComplete();
     }
 
@@ -83,6 +84,36 @@ class PaperServiceTest {
     }
 
     @Test
+    void findPapersByAuthorName_returnsPapers() {
+        when(paperRepository.findPapersByAuthorName("Alice")).thenReturn(Flux.just(paper(1L, "Alice's Paper")));
+
+        StepVerifier.create(paperService.findPapersByAuthorName("Alice"))
+                .assertNext(p -> org.junit.jupiter.api.Assertions.assertEquals("Alice's Paper", p.getTitle()))
+                .verifyComplete();
+
+        verify(paperRepository).findPapersByAuthorName("Alice");
+    }
+
+    @Test
+    void findPapersByAuthorName_returnsEmptyWhenNoneFound() {
+        when(paperRepository.findPapersByAuthorName("Unknown")).thenReturn(Flux.empty());
+
+        StepVerifier.create(paperService.findPapersByAuthorName("Unknown"))
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByInstitutionName_delegatesToRepository() {
+        when(paperRepository.findPapersByInstitutionName("MIT")).thenReturn(Flux.just(paper(3L, "MIT Paper")));
+
+        StepVerifier.create(paperService.findPapersByInstitutionName("MIT"))
+                .expectNextCount(1)
+                .verifyComplete();
+
+        verify(paperRepository).findPapersByInstitutionName("MIT");
+    }
+
+    @Test
     void createPaper_savesAndReturnsPaper() {
         Paper p = paper(5L, "New Paper");
         when(paperRepository.save(p)).thenReturn(Mono.just(p));
@@ -92,6 +123,35 @@ class PaperServiceTest {
                 .verifyComplete();
 
         verify(paperRepository).save(p);
+    }
+
+    @Test
+    void findPapersByTitleFuzzy_findsTypo() {
+        Paper p = paper(1L, "dette er en test");
+        when(paperRepository.findAll()).thenReturn(Flux.just(p));
+
+        StepVerifier.create(paperService.findPapersByTitleFuzzy("tset"))
+                .expectNext(p)
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByTitleFuzzy_returnsEmptyWhenNoMatch() {
+        Paper p = paper(1L, "Graph Theory");
+        when(paperRepository.findAll()).thenReturn(Flux.just(p));
+
+        StepVerifier.create(paperService.findPapersByTitleFuzzy("xyz"))
+                .verifyComplete();
+    }
+
+    @Test
+    void findPapersByTitleFuzzy_stillFindsExactContains() {
+        Paper p = paper(1L, "dette er en test");
+        when(paperRepository.findAll()).thenReturn(Flux.just(p));
+
+        StepVerifier.create(paperService.findPapersByTitleFuzzy("test"))
+                .expectNext(p)
+                .verifyComplete();
     }
 
     @Test
