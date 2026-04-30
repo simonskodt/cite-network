@@ -2056,14 +2056,34 @@ document.getElementById("sctx-cancel").onclick = () => hideSidebarCtxMenu();
 function showToast(msg, { ms = 3200, undoFn = null } = {}) {
   let el = document.getElementById("toast");
   if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
+
   el.innerHTML = "";
-  el.appendChild(document.createTextNode(msg));
+  el.style.display = "flex";
+  el.style.alignItems = "center";
+  el.style.gap = "10px";
+  el.style.overflow = "visible";
+  el.style.whiteSpace = "normal";
+
+  const text = document.createElement("span");
+  text.textContent = msg;
+  text.style.flex = "1 1 auto";
+  text.style.minWidth = "0";
+  text.style.overflow = "hidden";
+  text.style.textOverflow = "ellipsis";
+  text.style.whiteSpace = "nowrap";
+  el.appendChild(text);
+
   if (undoFn) {
+    const actions = document.createElement("span");
+    actions.style.flex = "0 0 auto";
+
     const btn = document.createElement("button");
     btn.textContent = "Undo";
-    btn.style.cssText = "margin-left:10px;padding:1px 8px;font-size:0.72rem;background:var(--surface2);border:1px solid var(--border2);color:var(--accent-text);border-radius:4px;cursor:pointer;vertical-align:middle";
+    btn.style.cssText = "padding:1px 8px;font-size:0.72rem;background:var(--surface2);border:1px solid var(--border2);color:var(--accent-text);border-radius:4px;cursor:pointer";
     btn.onclick = () => { clearTimeout(el._t); el.classList.remove("visible"); undoFn(); };
-    el.appendChild(btn);
+
+    actions.appendChild(btn);
+    el.appendChild(actions);
   }
   el.classList.add("visible");
   clearTimeout(el._t);
