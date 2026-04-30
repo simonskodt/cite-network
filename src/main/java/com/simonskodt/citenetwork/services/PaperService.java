@@ -57,7 +57,13 @@ public class PaperService {
     }
 
     public Flux<Paper> findPapersByTitleFuzzy(String query) {
+        if (query == null) {
+            return Flux.empty();
+        }
         String q = query.toLowerCase().trim();
+        if (q.isEmpty()) {
+            return Flux.empty();
+        }
         return paperRepository.findAll()
                 .filter(p -> isFuzzyTitleMatch(p.getTitle(), q));
     }
