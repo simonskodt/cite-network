@@ -1128,15 +1128,18 @@ function doWalkStep() {
 
   // Move walker dot
   const node = state.nodes.get(nextId);
-  if (node) moveWalkerDot(node.x, node.y, !prevId);
+  const fresh = !prevId;
+  if (node) moveWalkerDot(node.x, node.y, fresh);
 
-  // Update HUD
-  document.getElementById("walk-hud-step").textContent  = `Step ${walkStep}`;
-  const paper = state.nodes.get(nextId);
-  document.getElementById("walk-hud-paper").textContent = paper ? paper.title : "";
-
-  // Redraw node visuals
-  applyWalkVisuals();
+  // Delay colour/HUD update until the dot arrives at the node
+  const arrivalDelay = fresh ? 0 : Math.round(WALK_INTERVAL_MS * 0.75);
+  setTimeout(() => {
+    if (!walkActive) return;
+    document.getElementById("walk-hud-step").textContent  = `Step ${walkStep}`;
+    const paper = state.nodes.get(nextId);
+    document.getElementById("walk-hud-paper").textContent = paper ? paper.title : "";
+    applyWalkVisuals();
+  }, arrivalDelay);
 
   walkTimerId = setTimeout(doWalkStep, WALK_INTERVAL_MS);
 }
@@ -2027,6 +2030,8 @@ function dragstarted(e, d) {
       draftLine.attr("x1", d.x).attr("y1", d.y).attr("x2", d.x).attr("y2", d.y)
                .style("display", null);
       d.fx = null; d.fy = null;
+      // Cool the simulation so other nodes stop drifting while drawing
+      sim.alphaTarget(0);
     }
   }, 400);
 

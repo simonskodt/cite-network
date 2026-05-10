@@ -22,21 +22,51 @@ An interactive graph-based explorer showing how academic papers cite each other.
 
 ## Features
 
+### Graph exploration
+
 | Feature | Description |
 |---|---|
 | Force-directed graph | D3.js v7 simulation with directional citation arrows, colour-coded by decade |
-| Search | By title (partial match), author, publication year, or institution |
+| Zoom & pan | Mouse scroll, +/− buttons, or ⊡ to fit the full graph |
+| Node detail panel | Click any node to see its DOI, year, authors, and expand/remove actions |
+| Expand on demand | **Cited by this** / **Citing this** buttons load connected papers around the selected node |
+| BFS ripple | Clicking a node pulses an expanding ring outward hop-by-hop through the citation graph |
+| Context menu | Right-click any node to expand citations, remove from graph, or delete from the database |
+
+### Search
+
+| Feature | Description |
+|---|---|
+| Multi-type search | Search by title (partial match), author, publication year, or institution |
+| Fuzzy title search | If an exact match returns nothing, a second pass uses word-level Levenshtein distance (threshold `⌈len/3⌉`) to surface approximate matches, labelled *"N approximate matches"* |
 | Selective graph building | Search results appear in the sidebar only — click a result to add it to the graph, or press **Add to graph** / **Add all to graph** |
 | Source filter tabs | Filter sidebar results by **All**, **Seed**, or **Added** (user-created) papers |
-| Expand on demand | **Cited by this** / **Citing this** buttons load connected papers around the selected node |
-| Draw citation edges | Hold a node for ~400 ms, then drag to another node to create a citation link |
+
+### Editing
+
+| Feature | Description |
+|---|---|
 | Add new paper | Press **+ New** to create a paper (title, year, DOI, authors); optionally paste free text and let AI extract details |
 | Bulk import | Open **Bulk** to fetch papers by DOI via CrossRef, or paste free-text references for AI parsing; preview and confirm before committing |
-| Find online | Click **Find online** in the detail panel to open the DOI URL in a new tab |
-| AI integration | Configure an OpenAI or Anthropic key in **Settings** to enable AI-powered text parsing |
+| Draw citation edges | Hold a node for ~400 ms, then drag to another node to create a citation link |
+| Persist user papers | Papers created with **+ New** are saved to `localStorage` and restored on next visit |
+| Remove with undo | Removing nodes from the graph shows a 5-second undo toast to restore them |
+| Delete from database | Right-click a paper in the sidebar → **Delete from database** (inline confirm) to permanently remove it |
+
+### Animations
+
+| Feature | Description |
+|---|---|
+| Citation flow | Press ⚡ to run animated particles along every citation edge simultaneously |
+| Random walk (PageRank) | Press ⊛ to start a guided random walk: an amber dot hops between nodes following citation links (15 % restart probability). Visited nodes heat up from blue to rose proportional to visit frequency, visualising PageRank intuitively |
+
+### UI
+
+| Feature | Description |
+|---|---|
 | Light / dark mode | Toggle with the sun/moon button — preference saved in `localStorage` |
-| Node detail panel | Click any node to see its DOI, year, authors, and expand/remove actions |
-| Zoom & pan | Mouse scroll, +/− buttons, or ⊡ to fit the full graph |
+| AI integration | Configure an OpenAI or Anthropic key in **Settings** to enable AI-powered text parsing |
+| Find online | Click **Find online** in the detail panel to open the DOI URL in a new tab |
 | Configurable sample size | Set how many seed papers to load (1–20) next to the **Load** button |
 
 ---
@@ -81,7 +111,8 @@ An interactive graph-based explorer showing how academic papers cite each other.
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/papers?limit={n}` | First *n* papers (default 20) |
-| `GET` | `/papers/title/{title}` | Paper whose title contains the query |
+| `GET` | `/papers/title/{title}` | Papers whose title contains the query (case-insensitive) |
+| `GET` | `/papers/fuzzy-title/{query}` | Papers whose title approximately matches the query (word-level Levenshtein) |
 | `GET` | `/papers/author/{name}` | Papers by author name |
 | `GET` | `/papers/year/{year}` | Papers by publication year |
 | `GET` | `/papers/institution/{name}` | Papers by institution |
