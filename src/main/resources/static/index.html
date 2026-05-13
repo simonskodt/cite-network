@@ -64,6 +64,12 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      transition: width 0.22s ease, min-width 0.22s ease;
+    }
+    #sidebar.collapsed {
+      width: 0 !important;
+      min-width: 0 !important;
+      border-right: none;
     }
 
     #sidebar-header {
@@ -360,9 +366,28 @@
       background: var(--border);
       transition: background 0.15s;
       z-index: 10;
+      position: relative;
     }
     #sidebar-resize:hover,
     #sidebar-resize.dragging { background: var(--accent); }
+    #sidebar-collapse-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 18px; height: 36px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 0 5px 5px 0;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; color: var(--text-muted);
+      padding: 0;
+      z-index: 11;
+      transition: background 0.15s, color 0.15s;
+    }
+    #sidebar-collapse-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    #sidebar.collapsed ~ #sidebar-resize #sidebar-collapse-btn { border-radius: 5px; }
 
     /* ── Graph canvas ─────────────────────────────────────────────────────── */
     #graph-area {
@@ -675,7 +700,9 @@
 </div>
 
 <!-- ── Resize handle ─────────────────────────────────────────────────────── -->
-<div id="sidebar-resize"></div>
+<div id="sidebar-resize">
+  <button id="sidebar-collapse-btn" title="Hide / show sidebar">‹</button>
+</div>
 
 <!-- ── Graph canvas ──────────────────────────────────────────────────────── -->
 <div id="graph-area">
@@ -1961,6 +1988,33 @@ document.getElementById("theme-btn").onclick = () => {
 };
 applyTheme(localStorage.getItem("theme") || "dark");
 
+// ── Sidebar collapse ──────────────────────────────────────────────────────────
+(function () {
+  const sidebar = document.getElementById("sidebar");
+  const btn     = document.getElementById("sidebar-collapse-btn");
+  let savedWidth = null;
+
+  function setSidebarCollapsed(collapsed) {
+    if (collapsed) {
+      savedWidth = sidebar.style.width || null;
+      sidebar.classList.add("collapsed");
+      btn.textContent = "›";
+      btn.title = "Show sidebar";
+    } else {
+      sidebar.classList.remove("collapsed");
+      if (savedWidth) { sidebar.style.width = savedWidth; sidebar.style.minWidth = savedWidth; }
+      btn.textContent = "‹";
+      btn.title = "Hide sidebar";
+    }
+    setTimeout(centreSimulation, 240);
+  }
+
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    setSidebarCollapsed(!sidebar.classList.contains("collapsed"));
+  });
+})();
+
 // ── Sidebar resize ────────────────────────────────────────────────────────────
 (function () {
   const handle  = document.getElementById("sidebar-resize");
@@ -1968,6 +2022,8 @@ applyTheme(localStorage.getItem("theme") || "dark");
   let dragging = false, startX = 0, startW = 0;
 
   handle.addEventListener("mousedown", e => {
+    if (e.target.id === "sidebar-collapse-btn") return; // let the button handle its own clicks
+    if (sidebar.classList.contains("collapsed")) return; // don't drag when collapsed
     dragging = true;
     startX   = e.clientX;
     startW   = sidebar.getBoundingClientRect().width;
@@ -2044,6 +2100,7 @@ function dragged(e, d) {
     draftLine.attr("x2", e.x).attr("y2", e.y);
   } else {
     d.fx = e.x; d.fy = e.y;
+    if (tipEl.classList.contains("visible")) moveTip(e.sourceEvent);
   }
 }
 
