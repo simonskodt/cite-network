@@ -174,11 +174,19 @@ Tests use the embedded Neo4j harness — **no external database required**.
 mvn verify
 ```
 
-| Layer | Annotation | Tests |
-|---|---|---|
-| Repository | `@DataNeo4jTest` + harness | Cypher queries against a real in-process Neo4j |
-| Service | `@ExtendWith(MockitoExtension.class)` | Business logic with mocked repositories |
-| Controller | `@WebFluxTest` + `@MockBean` | HTTP routing, status codes, response shapes |
+| Layer | Test class | Annotation | What is covered |
+|---|---|---|---|
+| Repository | `PaperRepositoryTest` | `@DataNeo4jTest` + harness | Cypher queries: title (exact/partial/case), year, author, institution, citations, add/delete |
+| Repository | `AuthorRepositoryTest` | `@DataNeo4jTest` + harness | Authors by paper title, co-authors, save/delete |
+| Repository | `InstitutionRepositoryTest` | `@DataNeo4jTest` + harness | Authors by institution, papers by institution, institutions by author, save/delete |
+| Service | `PaperServiceTest` | `@ExtendWith(MockitoExtension)` | All delegation paths including fuzzy-title Levenshtein logic |
+| Service | `AuthorServiceTest` | `@ExtendWith(MockitoExtension)` | Co-author lookup, create, delete |
+| Service | `InstitutionServiceTest` | `@ExtendWith(MockitoExtension)` | All five delegation paths |
+| Service | `HealthCheckServiceTest` | `@ExtendWith(MockitoExtension)` | DB-up (query succeeds) and DB-down (exception) paths |
+| Controller | `PaperControllerTest` | `@WebFluxTest` + `@MockBean` | All endpoints: status codes, response shapes, fuzzy search |
+| Controller | `AuthorControllerTest` | `@WebFluxTest` + `@MockBean` | All four endpoints |
+| Controller | `InstitutionControllerTest` | `@WebFluxTest` + `@MockBean` | All five endpoints, empty-list cases |
+| Controller | `HealthCheckControllerTest` | `@WebFluxTest` + `@MockBean` | Up and down response strings |
 
 ---
 
