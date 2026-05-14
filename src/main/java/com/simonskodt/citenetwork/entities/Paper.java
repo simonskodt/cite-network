@@ -11,7 +11,7 @@ public class Paper {
     @Id
     private Long paperId;
     private String title;
-    private int publicationYear;
+    private Integer publicationYear;
     private String doi;
 
     @Relationship(type = "CITES", direction = Relationship.Direction.OUTGOING)
@@ -22,14 +22,14 @@ public class Paper {
 
     public Paper() {}
 
-    public Paper(Long paperId, String title, int publicationYear, String doi) {
+    public Paper(Long paperId, String title, Integer publicationYear, String doi) {
         this.paperId = paperId;
         this.title = title;
         this.publicationYear = publicationYear;
         this.doi = doi;
     }
 
-    public Paper(Long paperId, String title, int publicationYear, String doi, List<Paper> cites, List<Author> authors) {
+    public Paper(Long paperId, String title, Integer publicationYear, String doi, List<Paper> cites, List<Author> authors) {
         this.paperId = paperId;
         this.title = title;
         this.publicationYear = publicationYear;
@@ -44,8 +44,8 @@ public class Paper {
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
 
-    public int getPublicationYear() { return publicationYear; }
-    public void setPublicationYear(int publicationYear) { this.publicationYear = publicationYear; }
+    public Integer getPublicationYear() { return publicationYear; }
+    public void setPublicationYear(Integer publicationYear) { this.publicationYear = publicationYear; }
 
     public String getDoi() { return doi; }
     public void setDoi(String doi) { this.doi = doi; }

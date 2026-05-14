@@ -64,6 +64,12 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      transition: width 0.22s ease, min-width 0.22s ease;
+    }
+    #sidebar.collapsed {
+      width: 0 !important;
+      min-width: 0 !important;
+      border-right: none;
     }
 
     #sidebar-header {
@@ -360,9 +366,28 @@
       background: var(--border);
       transition: background 0.15s;
       z-index: 10;
+      position: relative;
     }
     #sidebar-resize:hover,
     #sidebar-resize.dragging { background: var(--accent); }
+    #sidebar-collapse-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 18px; height: 36px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 0 5px 5px 0;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; color: var(--text-muted);
+      padding: 0;
+      z-index: 11;
+      transition: background 0.15s, color 0.15s;
+    }
+    #sidebar-collapse-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    #sidebar.collapsed ~ #sidebar-resize #sidebar-collapse-btn { border-radius: 5px; }
 
     /* ── Graph canvas ─────────────────────────────────────────────────────── */
     #graph-area {
@@ -414,6 +439,19 @@
       background: var(--accent); color: #fff; border-color: var(--accent);
     }
     #graph-controls button.active:hover { opacity: 0.85; }
+
+    #walk-hud {
+      display: none; position: fixed; bottom: 52px; right: 12px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 9px 13px; z-index: 200;
+      pointer-events: none; max-width: 210px;
+    }
+    #walk-hud.visible { display: block; }
+    .walk-hud-title { font-weight: 700; font-size: 0.78rem; color: var(--accent-text); margin-bottom: 3px; }
+    #walk-hud-step  { font-size: 0.72rem; color: var(--text); margin-bottom: 2px; }
+    #walk-hud-paper { font-size: 0.68rem; color: var(--text2); white-space: nowrap;
+                      overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+    .walk-hud-note  { font-size: 0.63rem; color: var(--text2); font-style: italic; border-top: 1px solid var(--border); padding-top: 4px; }
 
     /* ── Tooltip ──────────────────────────────────────────────────────────── */
     #tooltip {
@@ -662,7 +700,9 @@
 </div>
 
 <!-- ── Resize handle ─────────────────────────────────────────────────────── -->
-<div id="sidebar-resize"></div>
+<div id="sidebar-resize">
+  <button id="sidebar-collapse-btn" title="Hide / show sidebar">‹</button>
+</div>
 
 <!-- ── Graph canvas ──────────────────────────────────────────────────────── -->
 <div id="graph-area">
@@ -687,6 +727,14 @@
     <button id="zoom-out-btn" title="Zoom out">−</button>
     <button id="fit-btn"      title="Fit to screen">⊡</button>
     <button id="flow-btn"     title="Toggle citation flow">∿</button>
+    <button id="walk-btn"     title="Random walk (PageRank)">⊛</button>
+  </div>
+
+  <div id="walk-hud">
+    <div class="walk-hud-title">Random Walk</div>
+    <div id="walk-hud-step">Step 0</div>
+    <div id="walk-hud-paper"></div>
+    <div class="walk-hud-note">Frequently visited nodes = high PageRank</div>
   </div>
 
   <div id="tooltip"></div>
@@ -783,7 +831,7 @@ const tipEl  = document.getElementById("tooltip");
 
 const zoom = d3.zoom()
   .scaleExtent([0.06, 4])
-  .on("zoom", e => root.attr("transform", e.transform));
+  .on("zoom", e => { root.attr("transform", e.transform); repositionContextMenu(); });
 svg.call(zoom);
 
 const sim = d3.forceSimulation()
@@ -892,6 +940,7 @@ function render() {
   sim.alpha(0.3).restart();
   updateStatus();
   if (flowActive) updateFlowDots();
+  if (walkActive) applyWalkVisuals();
 }
 
 function ticked() {
@@ -900,6 +949,10 @@ function ticked() {
   nodeSel.attr("transform", d => `translate(${d.x},${d.y})`);
   if (edgeDraw) draftLine.attr("x1", edgeDraw.src.x).attr("y1", edgeDraw.src.y);
   if (ctxTarget) repositionContextMenu();
+  if (walkActive && walkCurrent) {
+    const wn = state.nodes.get(walkCurrent);
+    if (wn) gFlow.select(".walk-dot").attr("cx", wn.x).attr("cy", wn.y);
+  }
 }
 
 function repositionContextMenu() {
@@ -988,6 +1041,154 @@ function stopFlow() {
   if (flowRafId) { cancelAnimationFrame(flowRafId); flowRafId = null; }
   document.getElementById("flow-btn").classList.remove("active");
   gFlow.selectAll(".flow-dot").remove();
+}
+
+// ── Random walk (PageRank demo) ───────────────────────────────────────────────
+let walkActive   = false;
+let walkTimerId  = null;
+let walkStep     = 0;
+let walkCurrent  = null;          // paperId string
+let walkVisits   = new Map();     // paperId → visit count
+const WALK_INTERVAL_MS  = 900;    // ms between hops
+const WALK_RESTART_PROB = 0.15;   // teleport-back probability (as in PageRank)
+const WALK_MAX_VISITS   = 30;     // saturates colour/size at this count
+const WALK_DECAY        = 0.97;   // per-step multiplicative decay of all visit counts
+
+function walkNeighbours(id) {
+  // Directed outgoing neighbours (papers this one cites)
+  const ids = [];
+  state.links.forEach(l => {
+    const s = String(l.source?.paperId ?? l.source);
+    const t = String(l.target?.paperId ?? l.target);
+    if (s === id) ids.push(t);
+  });
+  return ids;
+}
+
+function walkColour(visits) {
+  const t = Math.min(visits / WALK_MAX_VISITS, 1);
+  return d3.interpolateRgb("#4f8ef7", "#f43f5e")(t);  // blue → rose
+}
+
+function walkRadius(visits, base) {
+  const t = Math.min(visits / WALK_MAX_VISITS, 1);
+  return base * (1 + 0.6 * t);   // up to 60% bigger
+}
+
+function applyWalkVisuals() {
+  if (!walkActive) return;
+  nodeSel.select("circle").each(function(d) {
+    const id = String(d.paperId);
+    const v  = walkVisits.get(id) || 0;
+    const base = d === state.selected ? 14 : 10;
+    d3.select(this)
+      .attr("r",    v > 0 ? walkRadius(v, base) : base)
+      .attr("fill", v > 0 ? walkColour(v) : (d === state.selected ? "var(--accent)" : "var(--node-fill)"));
+  });
+}
+
+function flashEdge(fromId, toId) {
+  linkSel.each(function(l) {
+    const s = String(l.source?.paperId ?? l.source);
+    const t = String(l.target?.paperId ?? l.target);
+    if (s === fromId && t === toId) {
+      d3.select(this)
+        .attr("stroke", "#fbbf24").attr("stroke-width", 3)
+        .transition().duration(500).ease(d3.easeCubicOut)
+        .attr("stroke", "var(--link)").attr("stroke-width", 1.5);
+    }
+  });
+}
+
+function moveWalkerDot(x, y, fresh) {
+  let dot = gFlow.select(".walk-dot");
+  if (dot.empty()) {
+    dot = gFlow.append("circle")
+      .attr("class", "walk-dot")
+      .attr("r", 9)
+      .attr("fill", "#f59e0b")
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 2)
+      .attr("opacity", 0.92)
+      .attr("pointer-events", "none");
+  }
+  if (fresh) {
+    dot.attr("cx", x).attr("cy", y).attr("opacity", 0.92);
+  } else {
+    dot.transition().duration(WALK_INTERVAL_MS * 0.75).ease(d3.easeCubicInOut)
+      .attr("cx", x).attr("cy", y).attr("opacity", 0.92);
+  }
+}
+
+function doWalkStep() {
+  if (!walkActive) return;
+  const nodeIds = [...state.nodes.keys()];
+  if (!nodeIds.length) return;
+
+  const prevId = walkCurrent;
+
+  // Decay all visit counts
+  walkVisits.forEach((v, k) => walkVisits.set(k, v * WALK_DECAY));
+
+  // Choose next node
+  let nextId;
+  if (!prevId || Math.random() < WALK_RESTART_PROB) {
+    // Teleport to random node
+    nextId = nodeIds[Math.floor(Math.random() * nodeIds.length)];
+  } else {
+    const neighbours = walkNeighbours(prevId);
+    if (neighbours.length) {
+      nextId = neighbours[Math.floor(Math.random() * neighbours.length)];
+    } else {
+      // Dead-end: teleport
+      nextId = nodeIds[Math.floor(Math.random() * nodeIds.length)];
+    }
+  }
+
+  // Update visits
+  walkVisits.set(nextId, (walkVisits.get(nextId) || 0) + 1);
+  walkCurrent = nextId;
+  walkStep++;
+
+  // Flash edge if we actually followed a link
+  if (prevId && prevId !== nextId) flashEdge(prevId, nextId);
+
+  // Move walker dot
+  const node = state.nodes.get(nextId);
+  const fresh = !prevId;
+  if (node) moveWalkerDot(node.x, node.y, fresh);
+
+  // Delay colour/HUD update until the dot arrives at the node
+  const arrivalDelay = fresh ? 0 : Math.round(WALK_INTERVAL_MS * 0.75);
+  setTimeout(() => {
+    if (!walkActive) return;
+    document.getElementById("walk-hud-step").textContent  = `Step ${walkStep}`;
+    const paper = state.nodes.get(nextId);
+    document.getElementById("walk-hud-paper").textContent = paper ? paper.title : "";
+    applyWalkVisuals();
+  }, arrivalDelay);
+
+  walkTimerId = setTimeout(doWalkStep, WALK_INTERVAL_MS);
+}
+
+function startWalk() {
+  if (walkActive) return;
+  walkActive  = true;
+  walkStep    = 0;
+  walkCurrent = null;
+  walkVisits  = new Map();
+  document.getElementById("walk-btn").classList.add("active");
+  document.getElementById("walk-hud").classList.add("visible");
+  doWalkStep();
+}
+
+function stopWalk() {
+  walkActive = false;
+  if (walkTimerId) { clearTimeout(walkTimerId); walkTimerId = null; }
+  document.getElementById("walk-btn").classList.remove("active");
+  document.getElementById("walk-hud").classList.remove("visible");
+  gFlow.select(".walk-dot").remove();
+  render(); // restores node colours/sizes
 }
 
 function bfsRipple(source) {
@@ -1787,6 +1988,33 @@ document.getElementById("theme-btn").onclick = () => {
 };
 applyTheme(localStorage.getItem("theme") || "dark");
 
+// ── Sidebar collapse ──────────────────────────────────────────────────────────
+(function () {
+  const sidebar = document.getElementById("sidebar");
+  const btn     = document.getElementById("sidebar-collapse-btn");
+  let savedWidth = null;
+
+  function setSidebarCollapsed(collapsed) {
+    if (collapsed) {
+      savedWidth = sidebar.style.width || null;
+      sidebar.classList.add("collapsed");
+      btn.textContent = "›";
+      btn.title = "Show sidebar";
+    } else {
+      sidebar.classList.remove("collapsed");
+      if (savedWidth) { sidebar.style.width = savedWidth; sidebar.style.minWidth = savedWidth; }
+      btn.textContent = "‹";
+      btn.title = "Hide sidebar";
+    }
+    setTimeout(centreSimulation, 240);
+  }
+
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    setSidebarCollapsed(!sidebar.classList.contains("collapsed"));
+  });
+})();
+
 // ── Sidebar resize ────────────────────────────────────────────────────────────
 (function () {
   const handle  = document.getElementById("sidebar-resize");
@@ -1794,6 +2022,8 @@ applyTheme(localStorage.getItem("theme") || "dark");
   let dragging = false, startX = 0, startW = 0;
 
   handle.addEventListener("mousedown", e => {
+    if (e.target.id === "sidebar-collapse-btn") return; // let the button handle its own clicks
+    if (sidebar.classList.contains("collapsed")) return; // don't drag when collapsed
     dragging = true;
     startX   = e.clientX;
     startW   = sidebar.getBoundingClientRect().width;
@@ -1824,7 +2054,8 @@ applyTheme(localStorage.getItem("theme") || "dark");
 document.getElementById("zoom-in-btn").onclick  = () => svg.transition().call(zoom.scaleBy, 1.4);
 document.getElementById("zoom-out-btn").onclick = () => svg.transition().call(zoom.scaleBy, 0.7);
 document.getElementById("fit-btn").onclick = fitGraph;
-document.getElementById("flow-btn").onclick = () => flowActive ? stopFlow() : startFlow();
+document.getElementById("flow-btn").onclick  = () => flowActive  ? stopFlow()  : startFlow();
+document.getElementById("walk-btn").onclick  = () => walkActive  ? stopWalk()  : startWalk();
 
 function fitGraph() {
   const { width, height } = svg.node().getBoundingClientRect();
@@ -1855,6 +2086,8 @@ function dragstarted(e, d) {
       draftLine.attr("x1", d.x).attr("y1", d.y).attr("x2", d.x).attr("y2", d.y)
                .style("display", null);
       d.fx = null; d.fy = null;
+      // Cool the simulation so other nodes stop drifting while drawing
+      sim.alphaTarget(0);
     }
   }, 400);
 
@@ -1867,6 +2100,7 @@ function dragged(e, d) {
     draftLine.attr("x2", e.x).attr("y2", e.y);
   } else {
     d.fx = e.x; d.fy = e.y;
+    if (tipEl.classList.contains("visible")) moveTip(e.sourceEvent);
   }
 }
 
