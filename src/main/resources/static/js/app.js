@@ -1369,15 +1369,29 @@ document.getElementById("dp-close").onclick = () => {
   render();
 };
 document.getElementById("load-sample-btn").onclick = loadSample;
+// Empty-state quick-action buttons
+document.getElementById("es-load-btn").onclick   = loadSample;
+document.getElementById("es-search-btn").onclick = () => {
+  document.getElementById("search-input").focus();
+  document.getElementById("search-input").select();
+};
 document.getElementById("clear-btn").onclick = () => {
   state.nodes.clear(); state.links.length = 0; state.selected = null;
   document.getElementById("detail-panel").classList.remove("visible");
   document.getElementById("results-panel").innerHTML = `
     <div class="empty-state">
-      <svg class="empty-state-icon" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      <svg class="empty-state-graph" viewBox="0 0 72 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <line x1="36" y1="26" x2="12" y2="14" stroke="var(--border2)" stroke-width="1.5"/>
+        <line x1="36" y1="26" x2="60" y2="14" stroke="var(--border2)" stroke-width="1.5"/>
+        <line x1="36" y1="26" x2="20" y2="44" stroke="var(--border2)" stroke-width="1.5"/>
+        <line x1="36" y1="26" x2="56" y2="42" stroke="var(--border2)" stroke-width="1.5"/>
+        <circle cx="36" cy="26" r="8" fill="var(--accent)" opacity="0.85"/>
+        <circle cx="12" cy="14" r="5" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
+        <circle cx="60" cy="14" r="5" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
+        <circle cx="20" cy="44" r="4" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
+        <circle cx="56" cy="42" r="4" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
       </svg>
-      Graph cleared. Search for papers or press <strong>Load</strong> to continue.
+      <div><strong>Graph cleared.</strong><br>Search for papers or press <strong>Load</strong> to continue.</div>
     </div>`;
   render();
 };
