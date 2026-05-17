@@ -11,6 +11,117 @@ let allSeedPapers   = [];       // every paper loaded via the Load button this s
 let currentVisible  = [];       // the currently rendered result items (for refreshBadges)
 let filterTabActive = false;    // true when sidebar shows graph contents, not search results
 
+// ── Workspace management ──────────────────────────────────────────────────────
+// Two isolated workspaces: "playground" (seed/sample data) and "mine" (real research).
+// Each stores a full snapshot of the graph + sidebar state.
+const _wsStore = {
+  playground: { nodes: new Map(), links: [], selected: null, lastResults: [], filterTabActive: false, currentFilter: "all", seedPapers: [] },
+  mine:       { nodes: new Map(), links: [], selected: null, lastResults: [], filterTabActive: false, currentFilter: "all", seedPapers: [] },
+};
+let activeWorkspace = localStorage.getItem("active-workspace") || "playground";
+
+function _saveWorkspace(ws) {
+  _wsStore[ws].nodes          = new Map(state.nodes);
+  _wsStore[ws].links          = state.links.map(l => ({ source: l.source?.paperId ?? l.source, target: l.target?.paperId ?? l.target }));
+  _wsStore[ws].selected       = state.selected;
+  _wsStore[ws].lastResults    = [...lastResults];
+  _wsStore[ws].filterTabActive = filterTabActive;
+  _wsStore[ws].currentFilter  = currentFilter;
+  _wsStore[ws].seedPapers     = [...allSeedPapers];
+}
+
+function _restoreWorkspace(ws) {
+  const w = _wsStore[ws];
+  state.nodes   = new Map(w.nodes);
+  state.links   = w.links.slice();
+  state.selected = w.selected;
+  lastResults   = [...w.lastResults];
+  filterTabActive = w.filterTabActive;
+  allSeedPapers = [...w.seedPapers];
+  // "seed" filter only valid in playground
+  setFilter(ws === "mine" && w.currentFilter === "seed" ? "all" : w.currentFilter);
+}
+
+function _updateWorkspaceUI() {
+  const isPlay = activeWorkspace === "playground";
+  // Tab active states
+  document.querySelectorAll(".ws-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.ws === activeWorkspace));
+  // Tab aria-selected
+  document.getElementById("ws-playground").setAttribute("aria-selected", isPlay ? "true" : "false");
+  document.getElementById("ws-mine").setAttribute("aria-selected", isPlay ? "false" : "true");
+  // Sidebar data attribute drives CSS (amber tint + badge)
+  document.getElementById("sidebar").dataset.workspace = activeWorkspace;
+  // Load-sample group only in playground
+  document.getElementById("load-sample-group").style.display = isPlay ? "" : "none";
+  // "Seed" filter tab only meaningful in playground
+  const seedTab = document.querySelector(".filter-btn[data-filter='seed']");
+  if (seedTab) seedTab.style.display = isPlay ? "" : "none";
+  // Close open cpanels so they don't bleed between workspaces
+  ["add-paper-form", "bulk-panel", "settings-panel"].forEach(id =>
+    document.getElementById(id)?.classList.remove("open"));
+  // Detail panel belongs to whichever node is currently selected
+  if (!state.selected) document.getElementById("detail-panel").classList.remove("visible");
+  clearAnchorChip();
+}
+
+function switchWorkspace(name) {
+  if (name === activeWorkspace) return;
+  _saveWorkspace(activeWorkspace);
+  activeWorkspace = name;
+  localStorage.setItem("active-workspace", name);
+  _restoreWorkspace(name);
+  _updateWorkspaceUI();
+  render();
+  updateStatus();
+  // Restore the sidebar results panel
+  if (filterTabActive) {
+    refreshFilterTabView();
+  } else if (lastResults.length) {
+    setResultsList(lastResults, { showAddAll: true, updateBase: false });
+  } else {
+    _showWorkspaceEmptyState();
+  }
+}
+
+function _showWorkspaceEmptyState() {
+  const isPlay = activeWorkspace === "playground";
+  const panel = document.getElementById("results-panel");
+  panel.innerHTML = `
+    <div class="empty-state">
+      <svg class="empty-state-graph" viewBox="0 0 72 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <line x1="36" y1="26" x2="12" y2="14" stroke="var(--border2)" stroke-width="1.5"/>
+        <line x1="36" y1="26" x2="60" y2="14" stroke="var(--border2)" stroke-width="1.5"/>
+        <line x1="36" y1="26" x2="20" y2="44" stroke="var(--border2)" stroke-width="1.5"/>
+        <line x1="36" y1="26" x2="56" y2="42" stroke="var(--border2)" stroke-width="1.5"/>
+        <line x1="12" y1="14" x2="60" y2="14" stroke="var(--border2)" stroke-width="1" stroke-dasharray="3 2"/>
+        <circle cx="36" cy="26" r="8" fill="${isPlay ? "#f59e0b" : "var(--accent)"}" opacity="0.85"/>
+        <circle cx="12" cy="14" r="5" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
+        <circle cx="60" cy="14" r="5" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
+        <circle cx="20" cy="44" r="4" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
+        <circle cx="56" cy="42" r="4" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
+      </svg>
+      <div>
+        ${isPlay
+          ? `<strong>Playground</strong><br>Load sample papers to explore the graph — none of this affects your research.`
+          : `<strong>My Research</strong><br>Add your own papers via <strong>Bulk</strong> import, <strong>+ New</strong>, or search above.`}
+      </div>
+      ${isPlay
+        ? `<div class="empty-state-actions"><button class="sm" id="es-load-btn">Load sample</button><button class="sm secondary" id="es-search-btn">Search papers</button></div>`
+        : `<div class="empty-state-actions"><button class="sm" id="es-search-btn">Search papers</button><button class="sm secondary" id="es-bulk-btn">Bulk import</button></div>`}
+      <div class="empty-state-hint">Press <kbd style="background:var(--surface2);border:1px solid var(--border2);border-radius:3px;padding:0 4px;font-size:0.65rem">/</kbd> to focus search</div>
+    </div>`;
+  // Wire quick-action buttons
+  document.getElementById("es-load-btn")?.addEventListener("click", loadSample);
+  document.getElementById("es-search-btn")?.addEventListener("click", () => {
+    document.getElementById("search-input").focus();
+    document.getElementById("search-input").select();
+  });
+  document.getElementById("es-bulk-btn")?.addEventListener("click", () => {
+    document.getElementById("bulk-panel").classList.toggle("open");
+  });
+}
+
 // User-created papers persisted in localStorage across sessions
 function loadUserPapersFromStorage() {
   try { return JSON.parse(localStorage.getItem("user-papers") || "[]"); } catch { return []; }
@@ -438,11 +549,55 @@ function bfsRipple(source) {
   });
 }
 
+// ── Anchor chip (expand-results back button) ──────────────────────────────────
+let _expandAnchorNode = null;      // node whose detail panel was hidden for expansion
+let _expandAnchorDir  = null;      // "cited-by" | "citing"
+
+/** Re-create the anchor chip at the top of results-panel (called after panel HTML rebuild). */
+function _injectAnchorChip() {
+  if (!_expandAnchorNode) return;
+  const dirLabel = _expandAnchorDir === "cited-by" ? "References of" : "Cited by";
+  const node = _expandAnchorNode;
+
+  const chip = document.createElement("button");
+  chip.id = "anchor-chip";
+  chip.className = "anchor-chip";
+  chip.setAttribute("aria-label", "Back to paper detail");
+  chip.innerHTML = `
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    <span class="anchor-chip-dir">${dirLabel}:</span>
+    <span class="anchor-chip-title">${esc(trunc(node.title, 36))}</span>`;
+
+  chip.onclick = () => {
+    clearAnchorChip();
+    selectNode(node);
+  };
+
+  const panel = document.getElementById("results-panel");
+  panel.insertBefore(chip, panel.firstChild);
+}
+
+function showAnchorChip(node, direction) {
+  _expandAnchorNode = node;
+  _expandAnchorDir  = direction;
+  document.getElementById("detail-panel").classList.remove("visible");
+  // Remove any stale chip then re-inject
+  document.getElementById("anchor-chip")?.remove();
+  _injectAnchorChip();
+}
+
+function clearAnchorChip() {
+  document.getElementById("anchor-chip")?.remove();
+  _expandAnchorNode = null;
+  _expandAnchorDir  = null;
+}
+
 // ── Node selection ────────────────────────────────────────────────────────────
 function selectNode(d) {
   state.selected = d;
   bfsRipple(d);
   render();
+  clearAnchorChip();
   showDetail(d);
   refreshBadges();
 }
@@ -582,8 +737,12 @@ function removeNodesAnimated(paperIds) {
     .filter(l => ids.has(String(l.source?.paperId ?? l.source)) || ids.has(String(l.target?.paperId ?? l.target)))
     .map(l => ({ source: l.source?.paperId ?? l.source, target: l.target?.paperId ?? l.target }));
 
+  // Animate out, then remove from DOM so no ghost elements remain
   document.querySelectorAll(".result-item").forEach(el => {
-    if (ids.has(el.dataset.id)) el.classList.add("removing");
+    if (ids.has(el.dataset.id)) {
+      el.classList.add("removing");
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 600);
+    }
   });
 
   setTimeout(() => {
@@ -595,10 +754,17 @@ function removeNodesAnimated(paperIds) {
         savedPapers.forEach(p => addNodeToGraph(p));
         savedLinks.forEach(l => pushLink(l.source, l.target));
         render();
-        if (filterTabActive) refreshFilterTabView(); else refreshBadges();
+        updateStatus();
+        // Rebuild the sidebar list so the restored papers reappear
+        if (filterTabActive) {
+          refreshFilterTabView();
+        } else {
+          const base = lastResults.length ? lastResults : [...state.nodes.values()];
+          setResultsList(base, { showAddAll: !!lastResults.length, updateBase: false });
+        }
       },
     });
-  }, 700);
+  }, 650);
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
@@ -697,18 +863,58 @@ async function addPaperAndSelect(paper) {
   const [cx, cy] = d3.zoomTransform(svg.node()).invert([rect.width / 2, rect.height / 2]);
   addNodeToGraph(paper, { x: cx, y: cy });
 
-  // Connect to papers already in the graph
-  const [citedRes, citingRes] = await Promise.allSettled([
-    apiFetch(`/papers/${paper.paperId}/cited-by`),
-    apiFetch(`/papers/${paper.paperId}/citing`),
-  ]);
-  if (citedRes.status === "fulfilled")
-    citedRes.value.forEach(p => { if (state.nodes.has(String(p.paperId))) pushLink(paper.paperId, p.paperId); });
-  if (citingRes.status === "fulfilled")
-    citingRes.value.forEach(p => { if (state.nodes.has(String(p.paperId))) pushLink(p.paperId, paper.paperId); });
+  // 1 — Connect to papers already in the graph via local DB
+  const isS2 = String(paper.paperId).startsWith("s2:");
+  if (!isS2) {
+    const [citedRes, citingRes] = await Promise.allSettled([
+      apiFetch(`/papers/${paper.paperId}/cited-by`),
+      apiFetch(`/papers/${paper.paperId}/citing`),
+    ]);
+    if (citedRes.status === "fulfilled")
+      citedRes.value.forEach(p => { if (state.nodes.has(String(p.paperId))) pushLink(paper.paperId, p.paperId); });
+    if (citingRes.status === "fulfilled")
+      citingRes.value.forEach(p => { if (state.nodes.has(String(p.paperId))) pushLink(p.paperId, paper.paperId); });
+  }
 
   render();
   selectNode(state.nodes.get(String(paper.paperId)));
+
+  // 2 — Fire-and-forget: auto-connect to existing graph nodes via Semantic Scholar
+  //     Only adds EDGES to already-in-graph nodes; never adds new nodes here.
+  if ((paper.doi || paper._s2Id) && state.nodes.size > 1) {
+    const node = state.nodes.get(String(paper.paperId));
+    if (!node) return;
+    resolveS2Id(node)
+      .then(s2Id => {
+        if (!s2Id) return;
+        return Promise.allSettled([s2GetReferences(s2Id), s2GetCitations(s2Id)])
+          .then(([refsRes, citesRes]) => {
+            let changed = false;
+            if (refsRes.status === "fulfilled") {
+              refsRes.value.forEach(p => {
+                if (!p) return;
+                const target = (p.doi && findNodeByDOI(p.doi)) ||
+                               (state.nodes.has(p.paperId) ? state.nodes.get(p.paperId) : null);
+                if (target && target.paperId !== paper.paperId) {
+                  pushLink(paper.paperId, target.paperId); changed = true;
+                }
+              });
+            }
+            if (citesRes.status === "fulfilled") {
+              citesRes.value.forEach(p => {
+                if (!p) return;
+                const source = (p.doi && findNodeByDOI(p.doi)) ||
+                               (state.nodes.has(p.paperId) ? state.nodes.get(p.paperId) : null);
+                if (source && source.paperId !== paper.paperId) {
+                  pushLink(source.paperId, paper.paperId); changed = true;
+                }
+              });
+            }
+            if (changed) { render(); updateStatus(); }
+          });
+      })
+      .catch(() => {}); // silent — S2 is optional
+  }
 }
 
 // ── Add all results to graph ──────────────────────────────────────────────────
@@ -746,13 +952,20 @@ function refreshFilterTabView() {
     return;
   }
   const allInGraph = [...state.nodes.values()];
+  if (!allInGraph.length) {
+    // Graph is empty — show workspace-aware empty state (same as after Clear).
+    // The undo toast remains visible if this was triggered by "Remove all".
+    filterTabActive = false;
+    _showWorkspaceEmptyState();
+    return;
+  }
   const n     = allInGraph.length;
-  const label = n ? `${n} paper${n !== 1 ? "s" : ""} in graph` : "No papers in graph";
+  const label = `${n} paper${n !== 1 ? "s" : ""} in graph`;
   setResultsList(allInGraph, { showAddAll: true, label, updateBase: false });
 }
 
 function setResultsList(papers, { showAddAll = true, label, updateBase = true } = {}) {
-  if (updateBase) { lastResults = papers; filterTabActive = false; }
+  if (updateBase) { lastResults = papers; filterTabActive = false; clearAnchorChip(); }
 
   // Show filter tabs whenever there are papers in the graph
   const filterRow = document.getElementById("filter-row");
@@ -838,6 +1051,7 @@ function setResultsList(papers, { showAddAll = true, label, updateBase = true } 
   });
 
   refreshBadges(); // populate .bar-btns based on current graph state
+  _injectAnchorChip(); // re-add back chip if an expand is active
 }
 
 function refreshBadges() {
@@ -863,41 +1077,147 @@ function refreshBadges() {
 
   if (notInGraph.length === currentVisible.length) {
     // None in graph — offer to add all
-    btns.innerHTML = `<button class="sm secondary" id="bar-add-btn">${single ? "Add to graph" : "Add all to graph"}</button>`;
+    btns.innerHTML = `<button class="sm secondary" id="bar-add-btn">
+      ${single ? "Add to graph" : `Add all ${notInGraph.length} to graph`}
+    </button>`;
     document.getElementById("bar-add-btn").onclick = () => addAllToGraph(notInGraph);
   } else if (inGraph.length === currentVisible.length) {
     // All in graph — offer to remove all
-    btns.innerHTML = `<button class="sm danger" id="bar-remove-btn">${single ? "Remove from graph" : "Remove all from graph"}</button>`;
+    btns.innerHTML = `<button class="sm bar-remove-btn" id="bar-remove-btn"
+        title="Remove ${inGraph.length === 1 ? "this paper" : `all ${inGraph.length} papers`} from graph (undoable)">
+      ${single ? "Remove from graph" : `Remove all ${inGraph.length} from graph`}
+    </button>`;
     document.getElementById("bar-remove-btn").onclick = () => removeNodesAnimated(inGraph.map(p => p.paperId));
   } else {
-    // Mixed — offer both; "Remove remaining" = remove the ones already in graph
+    // Mixed — add unloaded ones + remove loaded ones
     btns.innerHTML = `
       <button class="sm secondary" id="bar-add-btn">Add ${notInGraph.length} to graph</button>
-      <button class="sm danger"    id="bar-remove-btn">Remove remaining</button>`;
+      <button class="sm bar-remove-btn" id="bar-remove-btn"
+          title="Remove ${inGraph.length} paper${inGraph.length !== 1 ? "s" : ""} already in graph (undoable)">
+        Remove ${inGraph.length} from graph
+      </button>`;
     document.getElementById("bar-add-btn").onclick    = () => addAllToGraph(notInGraph);
     document.getElementById("bar-remove-btn").onclick = () => removeNodesAnimated(inGraph.map(p => p.paperId));
   }
 }
 
-// ── Expand citations ──────────────────────────────────────────────────────────
+// ── Merge local-DB and S2 paper lists, deduplicating by DOI ──────────────────
+function mergePaperLists(dbPapers, s2Papers) {
+  const merged = [...dbPapers];
+  const doiSeen = new Set(dbPapers.filter(p => p.doi).map(p => p.doi.toLowerCase()));
+  const idSeen  = new Set(dbPapers.map(p => String(p.paperId)));
+  for (const p of s2Papers) {
+    if (!p) continue;
+    if (p.doi && doiSeen.has(p.doi.toLowerCase())) continue;
+    if (idSeen.has(String(p.paperId))) continue;
+    merged.push(p);
+    doiSeen.add(p.doi?.toLowerCase());
+    idSeen.add(String(p.paperId));
+  }
+  return merged;
+}
+
+// ── Expand citations — shows suggestions in sidebar rather than adding directly
 async function expandCitedBy(paperId) {
-  setStatus("Loading citations…");
-  try {
-    const papers = await apiFetch(`/papers/${paperId}/cited-by`);
-    const anchor  = state.nodes.get(String(paperId));
-    papers.forEach(p => { addNodeToGraph(p, anchor); pushLink(paperId, p.paperId); });
-    render(); setTimeout(fitGraph, 600);
-  } catch (e) { setStatus("Error: " + e.message); }
+  const anchor = state.nodes.get(String(paperId));
+  const isS2   = String(paperId).startsWith("s2:");
+  setStatus("Searching citations…");
+
+  // 1 — Local DB (skip for pure S2 nodes)
+  let dbPapers = [];
+  if (!isS2) {
+    try { dbPapers = await apiFetch(`/papers/${paperId}/cited-by`); }
+    catch (_) {}
+  }
+
+  // 2 — Semantic Scholar
+  let s2Papers = [], s2Status = null;
+  if (anchor) {
+    try {
+      const s2Id = await resolveS2Id(anchor);
+      if (s2Id) {
+        setStatus("Checking Semantic Scholar…");
+        s2Papers = await s2GetReferences(s2Id);
+      } else {
+        s2Status = "not found on Semantic Scholar";
+      }
+    } catch (e) {
+      s2Status = e.message.includes("404") ? "not found on Semantic Scholar"
+               : "Semantic Scholar unreachable";
+    }
+  }
+
+  // 3 — Merge and show as sidebar suggestions
+  const merged = mergePaperLists(dbPapers, s2Papers);
+  updateStatus();
+
+  if (!merged.length) {
+    const msg = s2Status
+      ? `No citations found (${s2Status}).`
+      : "No citations found in database or Semantic Scholar.";
+    showToast(msg, { ms: 4000 });
+    setStatus(msg);
+    return;
+  }
+
+  const sourceNote = s2Status  ? ` · ${s2Status}`
+    : s2Papers.length ? ` · ${s2Papers.length} from Semantic Scholar`
+    : "";
+  const label = `${merged.length} paper${merged.length !== 1 ? "s" : ""} cited by "${trunc(anchor?.title ?? "", 28)}"${sourceNote}`;
+  setResultsList(merged, { showAddAll: true, label, updateBase: true });
+  filterTabActive = false;
+  if (anchor) showAnchorChip(anchor, "cited-by");
 }
 
 async function expandCiting(paperId) {
-  setStatus("Loading citing papers…");
-  try {
-    const papers = await apiFetch(`/papers/${paperId}/citing`);
-    const anchor  = state.nodes.get(String(paperId));
-    papers.forEach(p => { addNodeToGraph(p, anchor); pushLink(p.paperId, paperId); });
-    render(); setTimeout(fitGraph, 600);
-  } catch (e) { setStatus("Error: " + e.message); }
+  const anchor = state.nodes.get(String(paperId));
+  const isS2   = String(paperId).startsWith("s2:");
+  setStatus("Searching citing papers…");
+
+  // 1 — Local DB
+  let dbPapers = [];
+  if (!isS2) {
+    try { dbPapers = await apiFetch(`/papers/${paperId}/citing`); }
+    catch (_) {}
+  }
+
+  // 2 — Semantic Scholar
+  let s2Papers = [], s2Status = null;
+  if (anchor) {
+    try {
+      const s2Id = await resolveS2Id(anchor);
+      if (s2Id) {
+        setStatus("Checking Semantic Scholar…");
+        s2Papers = await s2GetCitations(s2Id);
+      } else {
+        s2Status = "not found on Semantic Scholar";
+      }
+    } catch (e) {
+      s2Status = e.message.includes("404") ? "not found on Semantic Scholar"
+               : "Semantic Scholar unreachable";
+    }
+  }
+
+  // 3 — Merge and show as sidebar suggestions
+  const merged = mergePaperLists(dbPapers, s2Papers);
+  updateStatus();
+
+  if (!merged.length) {
+    const msg = s2Status
+      ? `No citing papers found (${s2Status}).`
+      : "No citing papers found in database or Semantic Scholar.";
+    showToast(msg, { ms: 4000 });
+    setStatus(msg);
+    return;
+  }
+
+  const sourceNote = s2Status  ? ` · ${s2Status}`
+    : s2Papers.length ? ` · ${s2Papers.length} from Semantic Scholar`
+    : "";
+  const label = `${merged.length} paper${merged.length !== 1 ? "s" : ""} citing "${trunc(anchor?.title ?? "", 28)}"${sourceNote}`;
+  setResultsList(merged, { showAddAll: true, label, updateBase: true });
+  filterTabActive = false;
+  if (anchor) showAnchorChip(anchor, "citing");
 }
 
 // ── Graph settings (persisted to localStorage) ────────────────────────────────
@@ -918,11 +1238,41 @@ function applyGraphSettings(s) {
   if (state.nodes.size > 0) sim.alpha(0.25).restart();
 }
 
-// ── DOI lookup via CrossRef ───────────────────────────────────────────────────
-async function fetchByDOI(doi) {
-  doi = doi.trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, "");
+// ── Fetch a single paper from Semantic Scholar by any S2 path ────────────────
+async function fetchFromS2ByPath(path) {
+  const data = await s2Request(path, { fields: S2_FIELDS });
+  if (!data?.paperId) throw new Error("Not found on Semantic Scholar");
+  const p = s2Normalize(data);
+  // Return in the same shape as fetchByDOI so bulk preview works uniformly
+  return {
+    title:           p.title,
+    publicationYear: p.publicationYear,
+    doi:             p.doi,
+    authors:         p.authors.map(a => a.name),
+    _s2Id:           p._s2Id,
+    _source:         "s2",
+  };
+}
+
+// ── Universal paper lookup: DOI, S2 URL, S2 ID, arXiv ID, or doi.org URL ──────
+async function fetchByDOI(line) {
+  line = line.trim();
+
+  // semanticscholar.org/paper/Some-Title/649def34f8be52c8b66281af98ae884c09aef38d
+  const s2Url = line.match(/semanticscholar\.org\/paper\/[^/]+\/([a-f0-9]{40})/i);
+  if (s2Url) return fetchFromS2ByPath(`/paper/${s2Url[1]}`);
+
+  // Raw 40-char hex S2 ID
+  if (/^[a-f0-9]{40}$/i.test(line)) return fetchFromS2ByPath(`/paper/${line}`);
+
+  // arXiv: 1706.03762  or  arXiv:1706.03762v2
+  const arxiv = line.match(/^(?:arxiv:)?(\d{4}\.\d{4,5}(?:v\d+)?)$/i);
+  if (arxiv) return fetchFromS2ByPath(`/paper/arXiv:${arxiv[1]}`);
+
+  // Regular DOI (bare or with doi.org prefix) — fetch via CrossRef for rich metadata
+  const doi = line.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "");
   const r = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`);
-  if (!r.ok) throw new Error(`DOI not found: ${doi}`);
+  if (!r.ok) throw new Error(`Not found: ${doi}`);
   const m = (await r.json()).message;
   return {
     title:           Array.isArray(m.title) ? m.title[0] : (m.title || doi),
@@ -930,6 +1280,251 @@ async function fetchByDOI(doi) {
     doi:             m.DOI || doi,
     authors:         (m.author || []).map(a => [a.given, a.family].filter(Boolean).join(" ")),
   };
+}
+
+// ── Semantic Scholar API ──────────────────────────────────────────────────────
+// All requests go through /api/s2/* on the local server (proxy) to avoid
+// browser CORS restrictions and shared-IP rate-limit drops.
+const S2_BASE   = "/api/s2";
+const S2_FIELDS = "paperId,title,year,authors,externalIds";
+
+function getS2Key() {
+  return (localStorage.getItem("setting-s2-key") || "").trim();
+}
+
+async function s2Request(path, params = {}, { _attempt = 1 } = {}) {
+  const qs  = new URLSearchParams(params).toString();
+  const url = S2_BASE + path + (qs ? "?" + qs : "");
+  const headers = {};
+  const key = getS2Key();
+  if (key) headers["x-api-key"] = key;
+
+  const r = await fetch(url, { headers });
+
+  if (r.status === 429) {
+    const maxRetries = 4;
+    if (_attempt > maxRetries) throw new Error("S2 rate limit — try again in a minute or add an API key in Settings ⚙");
+    // Exponential backoff: 5s, 10s, 20s, 40s
+    const waitMs = 5000 * Math.pow(2, _attempt - 1);
+    setStatus(`S2 rate limit — retrying in ${Math.round(waitMs / 1000)}s… (${_attempt}/${maxRetries})`);
+    await new Promise(res => setTimeout(res, waitMs));
+    return s2Request(path, params, { _attempt: _attempt + 1 });
+  }
+  if (r.status === 404) throw new Error("S2 404");
+  if (!r.ok) throw new Error(`S2 ${r.status}`);
+  return r.json();
+}
+
+function s2Normalize(s2p) {
+  if (!s2p?.paperId) return null;
+  return {
+    paperId:         "s2:" + s2p.paperId,
+    title:           s2p.title || "(Untitled)",
+    publicationYear: s2p.year  || null,
+    doi:             s2p.externalIds?.DOI || null,
+    authors:         (s2p.authors || []).map(a => ({ name: a.name })),
+    _s2Id:           s2p.paperId,
+    _source:         "s2",
+  };
+}
+
+// Find an existing graph node by DOI (case-insensitive)
+function findNodeByDOI(doi) {
+  if (!doi) return null;
+  const d = doi.toLowerCase();
+  for (const n of state.nodes.values()) {
+    if (n.doi && n.doi.toLowerCase() === d) return n;
+  }
+  return null;
+}
+
+async function s2LookupDOI(doi) {
+  const data = await s2Request(`/paper/DOI:${encodeURIComponent(doi)}`, { fields: S2_FIELDS });
+  return s2Normalize(data);
+}
+
+async function s2GetReferences(s2Id) {
+  const data = await s2Request(`/paper/${s2Id}/references`, { fields: S2_FIELDS, limit: "100" });
+  return (data.data || []).map(r => s2Normalize(r.citedPaper)).filter(Boolean);
+}
+
+async function s2GetCitations(s2Id) {
+  const data = await s2Request(`/paper/${s2Id}/citations`, { fields: S2_FIELDS, limit: "100" });
+  return (data.data || []).map(r => s2Normalize(r.citingPaper)).filter(Boolean);
+}
+
+// Resolve an S2 ID from a node's existing _s2Id or via DOI lookup
+async function resolveS2Id(node) {
+  if (node._s2Id) return node._s2Id;
+  if (node.doi) {
+    const p = await s2LookupDOI(node.doi);
+    if (p?._s2Id) { node._s2Id = p._s2Id; return p._s2Id; }
+  }
+  return null;
+}
+
+// Merge S2 papers into the graph, deduplicating by DOI.
+// direction: "cited-by" means paperId→s2paper, "citing" means s2paper→paperId
+function mergeS2Papers(papers, anchor, paperId, direction) {
+  let added = 0;
+  papers.forEach(p => {
+    if (!p) return;
+    // Check DOI collision with existing node
+    const existing = p.doi ? findNodeByDOI(p.doi) : null;
+    if (existing) {
+      if (direction === "cited-by") pushLink(paperId, existing.paperId);
+      else                          pushLink(existing.paperId, paperId);
+      return;
+    }
+    // Check S2 node already added
+    if (state.nodes.has(p.paperId)) {
+      if (direction === "cited-by") pushLink(paperId, p.paperId);
+      else                          pushLink(p.paperId, paperId);
+      return;
+    }
+    addNodeToGraph(p, anchor);
+    if (direction === "cited-by") pushLink(paperId, p.paperId);
+    else                          pushLink(p.paperId, paperId);
+    added++;
+  });
+  return added;
+}
+
+// ── BibTeX parser ─────────────────────────────────────────────────────────────
+function parseBibTeX(text) {
+  const entries = [];
+  const blocks = text.split(/(?=@\w+\s*\{)/);
+  for (const block of blocks) {
+    if (!/^@\w+\s*\{/i.test(block.trim())) continue;
+    if (/^@(string|preamble|comment)\s*\{/i.test(block.trim())) continue;
+    const fields = {};
+    const fieldRe = /(\w+)\s*=\s*(?:\{((?:[^{}]|\{[^{}]*\})*)\}|"([^"]*)"|(\d+))/gi;
+    let m;
+    while ((m = fieldRe.exec(block)) !== null) {
+      const k = m[1].toLowerCase();
+      if (!fields[k]) fields[k] = (m[2] ?? m[3] ?? m[4] ?? "").trim();
+    }
+    const title = fields.title || fields.booktitle;
+    if (!title) continue;
+    const authors = fields.author
+      ? fields.author.split(/\s+and\s+/i).map(a => a.trim()).filter(Boolean)
+      : [];
+    entries.push({
+      title,
+      publicationYear: fields.year ? parseInt(fields.year) : null,
+      doi:             fields.doi  ? fields.doi.replace(/\s/g, "") : null,
+      authors,
+    });
+  }
+  return entries;
+}
+
+// ── RIS parser ────────────────────────────────────────────────────────────────
+function parseRIS(text) {
+  const entries = [];
+  const records = text.split(/^ER\s*-\s*$/m);
+  for (const record of records) {
+    const authors = [];
+    const fields  = {};
+    for (const line of record.split("\n")) {
+      const m = line.match(/^([A-Z][A-Z0-9])\s{1,3}-\s*(.+)/);
+      if (!m) continue;
+      const [, tag, val] = m;
+      const v = val.trim();
+      switch (tag) {
+        case "TI": case "T1": case "CT":
+          if (!fields.title) fields.title = v; break;
+        case "PY": case "Y1":
+          if (!fields.year) fields.year = v.split("/")[0]; break;
+        case "DO":
+          if (!fields.doi) fields.doi = v.replace(/\s/g, ""); break;
+        case "AU": case "A1": case "A2":
+          authors.push(v); break;
+      }
+    }
+    if (!fields.title) continue;
+    entries.push({
+      title:           fields.title,
+      publicationYear: fields.year ? parseInt(fields.year) : null,
+      doi:             fields.doi  || null,
+      authors,
+    });
+  }
+  return entries;
+}
+
+// ── Enrich parsed bibliography entries via Semantic Scholar ───────────────────
+async function enrichWithS2(entries, onProgress) {
+  const hasKey  = !!getS2Key();
+  const delay   = hasKey ? 250 : 1100;  // ms between requests
+  const results = [];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    // Convert string author names to {name} objects
+    let paper = {
+      ...entry,
+      authors: entry.authors.map(a => typeof a === "string" ? { name: a } : a),
+    };
+    if (entry.doi) {
+      try {
+        const s2p = await s2LookupDOI(entry.doi);
+        if (s2p) {
+          paper = {
+            ...paper,
+            _s2Id:           s2p._s2Id,
+            authors:         paper.authors.length ? paper.authors : s2p.authors,
+            publicationYear: paper.publicationYear || s2p.publicationYear,
+          };
+        }
+      } catch (_) { /* S2 unreachable or paper not found — use parsed data */ }
+      if (delay > 0 && i < entries.length - 1) {
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+    results.push({ ok: true, paper });
+    onProgress?.(i + 1, entries.length);
+  }
+  return results;
+}
+
+// ── Handle .bib / .ris file ───────────────────────────────────────────────────
+async function handleBibFile(file) {
+  const bibStatusEl = document.getElementById("bib-status");
+  bibStatusEl.textContent = "Parsing file…";
+  let text;
+  try { text = await file.text(); } catch (e) {
+    bibStatusEl.textContent = "Could not read file.";
+    return;
+  }
+
+  let entries = [];
+  try {
+    entries = file.name.toLowerCase().endsWith(".ris")
+      ? parseRIS(text)
+      : parseBibTeX(text);
+  } catch (e) {
+    bibStatusEl.textContent = "Parse error: " + e.message;
+    return;
+  }
+
+  if (!entries.length) {
+    bibStatusEl.textContent = "No entries found in file.";
+    return;
+  }
+
+  const withDOI = entries.filter(e => !!e.doi).length;
+  bibStatusEl.textContent = withDOI
+    ? `Found ${entries.length} entries — enriching ${withDOI} via Semantic Scholar…`
+    : `Found ${entries.length} entries…`;
+
+  resetBulkPreview();
+
+  const results = await enrichWithS2(entries, (done, total) => {
+    if (withDOI) bibStatusEl.textContent = `Enriching ${done}/${total}…`;
+  });
+
+  bibStatusEl.textContent = "";
+  showBulkPreview(results);
 }
 
 // ── Post a paper to backend, return saved paper ───────────────────────────────
@@ -957,9 +1552,10 @@ function openSettings() {
   walkEl.value   = s.walkSpeed;
   chargeEl.value = s.charge;
   distEl.value   = s.linkDist;
-  document.getElementById("walk-speed-val").textContent = s.walkSpeed + " ms";
-  document.getElementById("charge-val").textContent     = s.charge;
-  document.getElementById("link-dist-val").textContent  = s.linkDist + " px";
+  document.getElementById("walk-speed-val").textContent  = s.walkSpeed + " ms";
+  document.getElementById("charge-val").textContent      = s.charge;
+  document.getElementById("link-dist-val").textContent   = s.linkDist + " px";
+  document.getElementById("setting-s2-key").value        = getS2Key();
   document.getElementById("settings-panel").classList.add("open");
 }
 
@@ -982,6 +1578,10 @@ document.getElementById("settings-close").onclick = closeAllPanels;
       localStorage.setItem(key, this.value);
       applyGraphSettings(loadGraphSettings());
     });
+  });
+  // S2 API key — save immediately on change
+  document.getElementById("setting-s2-key").addEventListener("input", function () {
+    localStorage.setItem("setting-s2-key", this.value.trim());
   });
 })();
 
@@ -1088,6 +1688,7 @@ function resetBulkPreview() {
   document.getElementById("bulk-preview").classList.remove("visible");
   document.getElementById("bulk-confirm-row").style.display = "none";
   document.getElementById("bulk-status").textContent = "";
+  document.getElementById("bib-status").textContent  = "";
 }
 
 document.getElementById("bulk-add-btn").onclick = async () => {
@@ -1121,7 +1722,76 @@ document.getElementById("bulk-add-btn").onclick = async () => {
 
 document.getElementById("bulk-discard-btn").onclick = () => {
   resetBulkPreview();
-  document.getElementById("bulk-doi-input").value = "";
+  document.getElementById("bulk-doi-input").value   = "";
+  document.getElementById("bib-text-input").value   = "";
+  document.getElementById("bib-status").textContent = "";
+};
+
+// ── Bibliography file upload (drop zone) ─────────────────────────────────────
+(function () {
+  const zone    = document.getElementById("bib-drop-zone");
+  const input   = document.getElementById("bib-file-input");
+  const browse  = document.getElementById("bib-browse-btn");
+
+  // Open file picker when clicking "browse" or the zone itself
+  browse.addEventListener("click", e => { e.stopPropagation(); input.click(); });
+  zone.addEventListener("click",   () => input.click());
+  zone.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+
+  input.addEventListener("change", () => {
+    const f = input.files?.[0];
+    if (f) handleBibFile(f);
+    input.value = ""; // reset so re-uploading the same file fires change again
+  });
+
+  // Drag-and-drop
+  zone.addEventListener("dragover",  e => { e.preventDefault(); zone.classList.add("drag-over"); });
+  zone.addEventListener("dragleave", e => { if (!zone.contains(e.relatedTarget)) zone.classList.remove("drag-over"); });
+  zone.addEventListener("drop",      e => {
+    e.preventDefault();
+    zone.classList.remove("drag-over");
+    const f = e.dataTransfer?.files?.[0];
+    if (!f) return;
+    if (!f.name.match(/\.(bib|ris)$/i)) {
+      document.getElementById("bib-status").textContent = "Please drop a .bib or .ris file.";
+      return;
+    }
+    handleBibFile(f);
+  });
+})();
+
+// ── Pasted BibTeX / RIS text ──────────────────────────────────────────────────
+document.getElementById("bib-text-btn").onclick = async () => {
+  const text = document.getElementById("bib-text-input").value.trim();
+  if (!text) return;
+  const bibStatusEl = document.getElementById("bib-status");
+  bibStatusEl.textContent = "Parsing…";
+  resetBulkPreview();
+
+  let entries = [];
+  try {
+    // Auto-detect format: BibTeX starts with @, RIS has "TY  -" lines
+    entries = /^TY\s+-/m.test(text) ? parseRIS(text) : parseBibTeX(text);
+  } catch (e) {
+    bibStatusEl.textContent = "Parse error: " + e.message;
+    return;
+  }
+
+  if (!entries.length) {
+    bibStatusEl.textContent = "No entries found — check the pasted text.";
+    return;
+  }
+
+  const withDOI = entries.filter(e => !!e.doi).length;
+  bibStatusEl.textContent = withDOI
+    ? `Found ${entries.length} entr${entries.length !== 1 ? "ies" : "y"} — enriching via Semantic Scholar…`
+    : `Found ${entries.length} entr${entries.length !== 1 ? "ies" : "y"}…`;
+
+  const results = await enrichWithS2(entries, (done, total) => {
+    if (withDOI) bibStatusEl.textContent = `Enriching ${done}/${total}…`;
+  });
+  bibStatusEl.textContent = "";
+  showBulkPreview(results);
 };
 
 document.getElementById("bulk-doi-btn").onclick = async () => {
@@ -1139,7 +1809,7 @@ document.getElementById("bulk-doi-btn").onclick = async () => {
     showBulkPreview(results);
   } catch (e) {
     document.getElementById("bulk-status").textContent = "Error: " + e.message;
-  } finally { btn.textContent = "Fetch by DOI (CrossRef)"; btn.disabled = false; }
+  } finally { btn.textContent = "Fetch papers"; btn.disabled = false; }
 };
 
 // ── Theme toggle ──────────────────────────────────────────────────────────────
@@ -1369,31 +2039,21 @@ document.getElementById("dp-close").onclick = () => {
   render();
 };
 document.getElementById("load-sample-btn").onclick = loadSample;
-// Empty-state quick-action buttons
-document.getElementById("es-load-btn").onclick   = loadSample;
-document.getElementById("es-search-btn").onclick = () => {
+// Empty-state quick-action buttons (in the initial HTML; also re-wired by _showWorkspaceEmptyState)
+document.getElementById("es-load-btn")?.addEventListener("click", loadSample);
+document.getElementById("es-search-btn")?.addEventListener("click", () => {
   document.getElementById("search-input").focus();
   document.getElementById("search-input").select();
-};
+});
 document.getElementById("clear-btn").onclick = () => {
   state.nodes.clear(); state.links.length = 0; state.selected = null;
+  allSeedPapers = [];
+  lastResults = []; filterTabActive = false;
   document.getElementById("detail-panel").classList.remove("visible");
-  document.getElementById("results-panel").innerHTML = `
-    <div class="empty-state">
-      <svg class="empty-state-graph" viewBox="0 0 72 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <line x1="36" y1="26" x2="12" y2="14" stroke="var(--border2)" stroke-width="1.5"/>
-        <line x1="36" y1="26" x2="60" y2="14" stroke="var(--border2)" stroke-width="1.5"/>
-        <line x1="36" y1="26" x2="20" y2="44" stroke="var(--border2)" stroke-width="1.5"/>
-        <line x1="36" y1="26" x2="56" y2="42" stroke="var(--border2)" stroke-width="1.5"/>
-        <circle cx="36" cy="26" r="8" fill="var(--accent)" opacity="0.85"/>
-        <circle cx="12" cy="14" r="5" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
-        <circle cx="60" cy="14" r="5" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
-        <circle cx="20" cy="44" r="4" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
-        <circle cx="56" cy="42" r="4" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1.5"/>
-      </svg>
-      <div><strong>Graph cleared.</strong><br>Search for papers or press <strong>Load</strong> to continue.</div>
-    </div>`;
+  clearAnchorChip();
   render();
+  _showWorkspaceEmptyState();
+  updateStatus();
 };
 
 // ── Source filter tabs ────────────────────────────────────────────────────────
@@ -1404,6 +2064,15 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
     refreshFilterTabView();
   });
 });
+
+// ── Workspace tab click handlers ──────────────────────────────────────────────
+document.querySelectorAll(".ws-tab").forEach(btn => {
+  btn.addEventListener("click", () => switchWorkspace(btn.dataset.ws));
+});
+
+// Apply persisted workspace on load
+_updateWorkspaceUI();
+_showWorkspaceEmptyState();
 
 // Apply persisted graph settings on load
 applyGraphSettings(loadGraphSettings());
@@ -1537,6 +2206,231 @@ function showToast(msg, { ms = 3200, undoFn = null } = {}) {
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove("visible"), ms);
 }
+
+// ── Onboarding tour ───────────────────────────────────────────────────────────
+const TOUR_STORAGE_KEY = "cn-tour-v1";
+
+const TOUR_STEPS = [
+  {
+    target:    null,
+    placement: "center",
+    title:     "Welcome to Citation Network 👋",
+    body:      "This quick tour shows you the main features. It takes about a minute — or skip anytime and explore on your own.",
+  },
+  {
+    target:    "#workspace-tabs",
+    placement: "bottom",
+    title:     "Two isolated workspaces",
+    body:      "You're in the <strong>Playground</strong> — a safe sandbox with sample data. Switch to <strong>My Research</strong> for your real papers. The two workspaces never share data.",
+  },
+  {
+    target:    "#load-sample-group",
+    placement: "bottom",
+    title:     "Load sample papers",
+    body:      "Press <strong>Load</strong> to fill the graph with 20 sample academic papers and their citation edges. Great for exploring the graph before adding your own work.",
+  },
+  {
+    target:    "#graph-area",
+    placement: "left",
+    title:     "The citation graph",
+    body:      "<strong>Click</strong> a node to select a paper · <strong>Scroll</strong> to zoom · <strong>Drag</strong> to pan · <strong>Right-click</strong> a node for quick actions.",
+  },
+  {
+    target:    "#search-area",
+    placement: "bottom",
+    title:     "Search &amp; filter",
+    body:      "Search by title, author, year, or institution. Results appear below and can be added to the graph with a single click.",
+  },
+  {
+    target:    "#bulk-btn",
+    placement: "bottom",
+    title:     "Import your bibliography",
+    body:      "Use <strong>Bulk</strong> to import a <strong>.bib</strong> or <strong>.ris</strong> export from Zotero or Mendeley, paste DOIs, or fetch papers directly from Semantic Scholar.",
+  },
+  {
+    target:    "#ws-mine",
+    placement: "bottom",
+    title:     "Ready to start your research?",
+    body:      "Switch to <strong>My Research</strong> to work with your actual papers in a clean, isolated workspace.",
+    isLast:    true,
+  },
+];
+
+let _tourStep = 0;
+let _tourRoot = null;
+
+function tourShouldShow() {
+  return !localStorage.getItem(TOUR_STORAGE_KEY);
+}
+
+function tourInit() {
+  if (!tourShouldShow()) return;
+  setTimeout(tourStart, 900); // small delay so page fully settles
+}
+
+function tourStart() {
+  // Build DOM
+  const root = document.createElement("div");
+  root.id = "tour-overlay";
+  root.innerHTML = `
+    <div id="tour-spotlight"></div>
+    <div id="tour-tooltip" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+      <div id="tour-progress"></div>
+      <h3 id="tour-title"></h3>
+      <p id="tour-body"></p>
+      <div id="tour-actions">
+        <button id="tour-skip">Skip tour</button>
+        <div id="tour-nav">
+          <button id="tour-back" class="tour-nav-btn secondary sm">← Back</button>
+          <button id="tour-next" class="tour-nav-btn sm">Next →</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(root);
+  _tourRoot = root;
+  _tourStep = 0;
+
+  document.getElementById("tour-skip").onclick  = tourEnd;
+  document.getElementById("tour-back").onclick  = () => tourGo(_tourStep - 1);
+  document.getElementById("tour-next").onclick  = tourAdvance;
+
+  document.addEventListener("keydown", _tourKeyHandler);
+  window.addEventListener("resize", _tourReposition);
+
+  tourGo(0);
+  requestAnimationFrame(() => root.classList.add("visible"));
+}
+
+function _tourKeyHandler(e) {
+  if (e.key === "Escape")     { tourEnd(); return; }
+  if (e.key === "ArrowRight") { tourAdvance(); return; }
+  if (e.key === "ArrowLeft" && _tourStep > 0) tourGo(_tourStep - 1);
+}
+
+function _tourReposition() {
+  if (_tourRoot) tourGo(_tourStep);
+}
+
+function tourAdvance() {
+  const step = TOUR_STEPS[_tourStep];
+  if (step.isLast) {
+    tourEnd();
+    switchWorkspace("mine");
+  } else {
+    tourGo(_tourStep + 1);
+  }
+}
+
+function tourGo(idx) {
+  _tourStep = Math.max(0, Math.min(idx, TOUR_STEPS.length - 1));
+  const step    = TOUR_STEPS[_tourStep];
+  const isFirst = _tourStep === 0;
+  const isLast  = step.isLast;
+
+  // Content
+  document.getElementById("tour-title").innerHTML = step.title;
+  document.getElementById("tour-body").innerHTML  = step.body;
+  document.getElementById("tour-back").style.visibility = isFirst ? "hidden" : "";
+
+  const nextBtn = document.getElementById("tour-next");
+  nextBtn.textContent = isLast ? "Go to My Research →" : "Next →";
+  nextBtn.classList.toggle("tour-finish", !!isLast);
+
+  // Progress dots
+  document.getElementById("tour-progress").innerHTML =
+    TOUR_STEPS.map((_, i) =>
+      `<span class="tour-dot${i === _tourStep ? " active" : ""}"></span>`
+    ).join("");
+
+  // Position spotlight + tooltip
+  _tourPositionStep(step);
+}
+
+function _tourPositionStep(step) {
+  const spotlight = document.getElementById("tour-spotlight");
+  const tooltip   = document.getElementById("tour-tooltip");
+  const overlay   = document.getElementById("tour-overlay");
+  if (!spotlight || !tooltip) return;
+
+  const PAD = 10, GAP = 16, TW = 290;
+
+  if (!step.target) {
+    // Welcome step — full-dim, tooltip centered, no spotlight
+    overlay.classList.add("dim");
+    spotlight.style.display = "none";
+    tooltip.style.cssText   = "left:50%;top:50%;transform:translate(-50%,-50%)";
+    return;
+  }
+
+  overlay.classList.remove("dim");
+  const el = document.querySelector(step.target);
+  if (!el) {
+    // Fallback to center if target missing
+    overlay.classList.add("dim");
+    spotlight.style.display = "none";
+    tooltip.style.cssText   = "left:50%;top:50%;transform:translate(-50%,-50%)";
+    return;
+  }
+
+  const r  = el.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Spotlight over target
+  spotlight.style.cssText = `
+    display: block;
+    left:   ${r.left   - PAD}px;
+    top:    ${r.top    - PAD}px;
+    width:  ${r.width  + PAD * 2}px;
+    height: ${r.height + PAD * 2}px;`;
+
+  // Tooltip placement
+  let left, top;
+  const estimatedH = 200;
+
+  switch (step.placement) {
+    case "bottom":
+      top  = r.bottom + PAD + GAP;
+      left = clamp(r.left + r.width / 2 - TW / 2, 12, vw - TW - 12);
+      break;
+    case "top":
+      top  = r.top - PAD - GAP - estimatedH;
+      left = clamp(r.left + r.width / 2 - TW / 2, 12, vw - TW - 12);
+      break;
+    case "right":
+      left = r.right + PAD + GAP;
+      top  = clamp(r.top + r.height / 2 - estimatedH / 2, 12, vh - estimatedH - 12);
+      break;
+    case "left":
+      left = clamp(r.left - PAD - GAP - TW, 12, vw - TW - 12);
+      top  = clamp(r.top + r.height / 2 - estimatedH / 2, 12, vh - estimatedH - 12);
+      break;
+    default:
+      overlay.classList.add("dim");
+      spotlight.style.display = "none";
+      tooltip.style.cssText   = "left:50%;top:50%;transform:translate(-50%,-50%)";
+      return;
+  }
+
+  tooltip.style.cssText = `left:${left}px; top:${clamp(top, 12, vh - estimatedH - 12)}px;`;
+}
+
+function tourEnd() {
+  localStorage.setItem(TOUR_STORAGE_KEY, "1");
+  document.removeEventListener("keydown", _tourKeyHandler);
+  window.removeEventListener("resize", _tourReposition);
+  if (_tourRoot) {
+    _tourRoot.classList.remove("visible");
+    const el = _tourRoot;
+    setTimeout(() => el.remove(), 350);
+    _tourRoot = null;
+  }
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(v, hi)); }
+
+// Start the tour now that all functions are declared
+tourInit();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function trunc(s, n) { return s && s.length > n ? s.slice(0, n) + "…" : (s || ""); }

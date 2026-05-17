@@ -23,6 +23,21 @@
     </div>
   </div>
 
+  <!-- Workspace tabs -->
+  <div id="workspace-tabs" role="tablist" aria-label="Workspace">
+    <button class="ws-tab" id="ws-playground" data-ws="playground" role="tab" aria-selected="true"
+            title="Explore with sample data — no effect on your real research">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+      Playground
+    </button>
+    <button class="ws-tab" id="ws-mine" data-ws="mine" role="tab" aria-selected="false"
+            title="Your real research papers">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      My Research
+    </button>
+    <span id="playground-badge" aria-label="Sample data — not your research">Sample data</span>
+  </div>
+
   <!-- Settings panel -->
   <div id="settings-panel" class="cpanel">
     <div class="cpanel-inner">
@@ -37,6 +52,10 @@
       <div class="setting-row">
         <label>Link distance <span id="link-dist-val" class="setting-label-val">170 px</span></label>
         <input type="range" id="setting-link-dist" min="60" max="400" step="10" value="170" />
+      </div>
+      <div class="setting-row">
+        <label>Semantic Scholar key <span style="color:var(--text-muted);font-weight:400;font-size:0.6rem;text-transform:none;letter-spacing:0">optional — higher rate limits</span></label>
+        <input type="password" id="setting-s2-key" placeholder="Paste API key…" autocomplete="off" />
       </div>
       <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
         <button id="settings-clear-user" class="secondary sm" style="width:100%">Clear saved papers</button>
@@ -110,11 +129,32 @@
   <!-- Bulk import panel -->
   <div id="bulk-panel" class="cpanel">
     <div class="cpanel-inner">
+      <!-- Bibliography file import -->
+      <div>
+        <label>Import bibliography (.bib or .ris)</label>
+        <div id="bib-drop-zone" class="bib-drop-zone" tabindex="0" role="button" aria-label="Drop .bib or .ris file here to import">
+          <input type="file" id="bib-file-input" accept=".bib,.ris" style="display:none" />
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Drop here or <span class="bib-browse-link" id="bib-browse-btn">browse</span></span>
+        </div>
+        <p id="bib-status" class="cpanel-note" style="margin-top:3px;min-height:1em"></p>
+      </div>
+      <div class="cpanel-divider">or paste BibTeX / RIS text</div>
+      <div>
+        <textarea id="bib-text-input" rows="4" placeholder="@article{...}  or  TY  - JOUR …"></textarea>
+        <button type="button" class="secondary sm" id="bib-text-btn" style="margin-top:4px;width:100%">Parse pasted text</button>
+      </div>
+      <div class="cpanel-divider">or paste DOIs</div>
       <div>
         <label>Paste DOIs — one per line</label>
-        <textarea id="bulk-doi-input" rows="3" placeholder="10.1145/3442188.3445922&#10;10.1038/s41586-021-03819-2"></textarea>
-        <button type="button" class="secondary sm" id="bulk-doi-btn" style="margin-top:4px;width:100%">Fetch by DOI (CrossRef)</button>
-      </div>
+        <p class="cpanel-note" style="margin-bottom:4px">
+          Find papers on
+          <a href="https://www.semanticscholar.org/search" target="_blank" rel="noopener" class="cpanel-link">Semantic Scholar ↗</a>
+          — paste a DOI, arXiv ID, S2 ID, or full URL
+        </p>
+        <textarea id="bulk-doi-input" rows="4" placeholder="10.1145/3442188.3445922&#10;1706.03762&#10;semanticscholar.org/paper/…/649def34…&#10;649def34f8be52c8b66281af98ae884c09aef38d"></textarea>
+        <button type="button" class="secondary sm" id="bulk-doi-btn" style="margin-top:4px;width:100%">Fetch papers</button>
+      </div><!-- /DOI section -->
       <div id="bulk-status" class="cpanel-note"></div>
 
       <!-- Preview step: shown after fetch/parse, before committing -->
@@ -230,8 +270,8 @@
         <tr class="help-section-row"><td colspan="2">Adding papers</td></tr>
         <tr><td><span class="hk">Load</span></td><td>Load N seed papers into the graph; set the count with the number input</td></tr>
         <tr><td><span class="hk">Search bar</span></td><td>Find by title, author, year, or institution — results appear in the sidebar; click to add</td></tr>
-        <tr><td><span class="hk">+ New</span></td><td>Create a new paper manually, or paste text for AI extraction</td></tr>
-        <tr><td><span class="hk">Bulk</span></td><td>Import multiple papers by DOI via CrossRef, or free-text via AI</td></tr>
+        <tr><td><span class="hk">+ New</span></td><td>Create a new paper manually</td></tr>
+        <tr><td><span class="hk">Bulk</span></td><td>Import a <strong>.bib</strong> or <strong>.ris</strong> file (e.g. from Zotero/Mendeley), or paste DOIs for CrossRef lookup; entries are enriched via Semantic Scholar</td></tr>
         <tr class="help-section-row"><td colspan="2">Drawing citation arrows</td></tr>
         <tr><td><span class="hk">Hold ~400 ms</span></td><td>Enter drag mode — drag the dashed arrow to a target node</td></tr>
         <tr><td><span class="hk">Double-click node</span></td><td>Enter persistent draw mode — then click any other node to connect</td></tr>

@@ -184,8 +184,39 @@ function respond(res, status, body) {
   res.end(json);
 }
 
+const https = require("https");
+
+// Proxy: GET /api/s2/* → https://api.semanticscholar.org/graph/v1/*
+// Avoids browser CORS and shared-IP rate-limit issues.
+function proxyS2(req, res) {
+  const s2Path = req.url.replace(/^\/api\/s2/, "");
+  const target = "https://api.semanticscholar.org/graph/v1" + s2Path;
+  const parsed = new URL(target);
+  const fwdHeaders = { "User-Agent": "cite-network-proxy/1.0" };
+  if (req.headers["x-api-key"]) fwdHeaders["x-api-key"] = req.headers["x-api-key"];
+
+  const s2req = https.request(
+    { hostname: parsed.hostname, path: parsed.pathname + parsed.search, method: "GET", headers: fwdHeaders },
+    s2res => {
+      res.writeHead(s2res.statusCode, {
+        "Content-Type":                "application/json",
+        "Access-Control-Allow-Origin": "*",
+      });
+      s2res.pipe(res);
+    }
+  );
+  s2req.on("error", e => { res.writeHead(502); res.end(JSON.stringify({ error: e.message })); });
+  s2req.end();
+}
+
 const server = http.createServer((req, res) => {
   const url = req.url.split("?")[0];
+
+  // Semantic Scholar proxy
+  if (req.method === "GET" && url.startsWith("/api/s2/")) {
+    proxyS2(req, res);
+    return;
+  }
 
   // POST /papers/:citingId/cites/:citedId — add a citation edge
   const citesM = url.match(/^\/papers\/(\d+)\/cites\/(\d+)$/);
